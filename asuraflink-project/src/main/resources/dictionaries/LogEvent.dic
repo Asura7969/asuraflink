@@ -1,0 +1,6 @@
+level=INFO|||DEBUG
+dateTime=$Func{timestamp()}
+status=200|||200|||200|||500|||200|||503|||200|||504
+responseTime=$Func{intRand(30,6000)}
+path=list|||add|||remove|||info|||update
+id=$Func{intRand(1000,9999)}

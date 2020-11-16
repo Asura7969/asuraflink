@@ -1,0 +1,7 @@
+userId=$Func{intRand(10,99)}
+channel=APP
+eventType=VIEW_PRODUCT|||ADD_TO_CART|||REMOVE_FROM_CART
+eventTime=$Func{timestamp()}
+productId=$Func{intRand(100, 150)}
+price=600|||500|||300|||340|||246
+amount=$Func{intRand(1, 50)}
