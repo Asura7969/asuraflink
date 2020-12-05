@@ -104,7 +104,7 @@ under the License.
 			</dependency>
 			<dependency>
 				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-runtime_2.11</artifactId>
+				<artifactId>flink-runtime_${scala.binary.version}</artifactId>
 				<version>${flink.version}</version>
 				<scope>provided</scope>
 			</dependency>
@@ -117,6 +117,12 @@ under the License.
 			<dependency>
 				<groupId>org.apache.flink</groupId>
 				<artifactId>flink-core</artifactId>
+				<version>${flink.version}</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.flink</groupId>
+				<artifactId>flink-table-planner_${scala.binary.version}</artifactId>
 				<version>${flink.version}</version>
 				<scope>provided</scope>
 			</dependency>
@@ -159,7 +165,7 @@ under the License.
 			<!--flink statebackend-rocksdb-->
 			<dependency>
 				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-statebackend-rocksdb_2.11</artifactId>
+				<artifactId>flink-statebackend-rocksdb_${scala.binary.version}</artifactId>
 				<version>${flink.version}</version>
 				<!--<scope>test</scope>-->
 			</dependency>
@@ -171,17 +177,17 @@ under the License.
 			</dependency>
 			<dependency>
 				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-streaming-java_2.11</artifactId>
+				<artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
 				<version>${flink.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-clients_2.11</artifactId>
+				<artifactId>flink-clients_${scala.binary.version}</artifactId>
 				<version>${flink.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-cep-scala_2.11</artifactId>
+				<artifactId>flink-cep-scala_${scala.binary.version}</artifactId>
 				<version>${flink.version}</version>
 			</dependency>
 
