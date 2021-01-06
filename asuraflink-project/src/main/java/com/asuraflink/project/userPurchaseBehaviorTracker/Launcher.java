@@ -24,8 +24,8 @@ import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer010;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer010;
+import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
+import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
 
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -87,7 +87,7 @@ public class Launcher {
         consumerProps.setProperty(GROUP_ID, params.get(GROUP_ID));
 
         // 事件流
-        final FlinkKafkaConsumer010<UserEvent> kafkaUserEventSource = new FlinkKafkaConsumer010<>(
+        final FlinkKafkaConsumer<UserEvent> kafkaUserEventSource = new FlinkKafkaConsumer<>(
                 params.get(INPUT_EVENT_TOPIC),
                 new UserEventDeserializationSchema(),consumerProps);
 
@@ -99,7 +99,7 @@ public class Launcher {
         //customerUserEventStream.print();
 
         // 配置流
-        final FlinkKafkaConsumer010<Config> kafkaConfigEventSource = new FlinkKafkaConsumer010<>(
+        final FlinkKafkaConsumer<Config> kafkaConfigEventSource = new FlinkKafkaConsumer<>(
                 params.get(INPUT_CONFIG_TOPIC),
                 new ConfigDeserializationSchema(), consumerProps);
 
@@ -113,14 +113,14 @@ public class Launcher {
         producerProps.setProperty(BOOTSTRAP_SERVERS, params.get(BOOTSTRAP_SERVERS));
         producerProps.setProperty(RETRIES, "3");
 
-        final FlinkKafkaProducer010<EvaluatedResult> kafkaProducer = new FlinkKafkaProducer010<>(
+        final FlinkKafkaProducer<EvaluatedResult> kafkaProducer = new FlinkKafkaProducer<>(
                 params.get(OUTPUT_TOPIC),
                 new EvaluatedResultSerializationSchema(),
                 producerProps);
 
         /* at_ least_once 设置 */
         kafkaProducer.setLogFailuresOnly(false);
-        kafkaProducer.setFlushOnCheckpoint(true);
+//        kafkaProducer.setFlushOnCheckpoint(true);
 
         DataStream<EvaluatedResult> connectedStream = customerUserEventStream
                 .connect(configBroadcastStream)

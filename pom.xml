@@ -54,7 +54,7 @@ under the License.
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<flink.version>1.10.0</flink.version>
+		<flink.version>1.12.0</flink.version>
 		<sl4j.version>1.7.7</sl4j.version>
 		<fastjson.version>1.2.62</fastjson.version>
 		<es.spark.version>6.0.0</es.spark.version>
@@ -63,6 +63,7 @@ under the License.
 		<jetbrains.annotations.version>1.5.0</jetbrains.annotations.version>
 		<commons.logging.version>1.2</commons.logging.version>
 		<lombok.version>1.18.4</lombok.version>
+		<junit.version>4.12</junit.version>
 		<scala.binary.version>2.11</scala.binary.version>
 		<scala.version>2.11.12</scala.version>
 		<java.version>1.8</java.version>
@@ -147,7 +148,7 @@ under the License.
             -->
 			<dependency>
 				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-connector-kafka-0.11_${scala.binary.version}</artifactId>
+				<artifactId>flink-connector-kafka_${scala.binary.version}</artifactId>
 				<version>${flink.version}</version>
 			</dependency>
 
@@ -169,6 +170,17 @@ under the License.
 				<version>${flink.version}</version>
 				<!--<scope>test</scope>-->
 			</dependency>
+			<dependency>
+				<groupId>org.apache.flink</groupId>
+				<artifactId>flink-table-common</artifactId>
+				<version>${flink.version}</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.flink</groupId>
+				<artifactId>flink-json</artifactId>
+				<version>${flink.version}</version>
+			</dependency>
 			<!--flink connect-->
 			<dependency>
 				<groupId>org.apache.flink</groupId>
@@ -188,6 +200,11 @@ under the License.
 			<dependency>
 				<groupId>org.apache.flink</groupId>
 				<artifactId>flink-cep-scala_${scala.binary.version}</artifactId>
+				<version>${flink.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.flink</groupId>
+				<artifactId>flink-table</artifactId>
 				<version>${flink.version}</version>
 			</dependency>
 
@@ -284,6 +301,44 @@ under the License.
 				<groupId>org.realityforge.org.jetbrains.annotations</groupId>
 				<artifactId>org.jetbrains.annotations</artifactId>
 				<version>${jetbrains.annotations.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>JUnit</groupId>
+				<artifactId>JUnit</artifactId>
+				<version>${junit.version}</version>
+			</dependency>
+
+
+			<!-- JSON RowData schema test dependency -->
+			<dependency>
+				<groupId>org.apache.flink</groupId>
+				<artifactId>flink-table-planner-blink_${scala.binary.version}</artifactId>
+				<version>${flink.version}</version>
+				<scope>test</scope>
+			</dependency>
+
+			<!-- Json filesystem format factory ITCase test dependency -->
+			<dependency>
+				<groupId>org.apache.flink</groupId>
+				<artifactId>flink-table-planner-blink_${scala.binary.version}</artifactId>
+				<version>${flink.version}</version>
+				<scope>test</scope>
+				<type>test-jar</type>
+			</dependency>
+
+			<!-- test utils dependency -->
+			<dependency>
+				<groupId>org.apache.flink</groupId>
+				<artifactId>flink-test-utils_${scala.binary.version}</artifactId>
+				<version>${flink.version}</version>
+				<scope>test</scope>
+			</dependency>
+
+			<!-- JSON RowData schema test dependency -->
+			<dependency>
+				<groupId>org.scala-lang</groupId>
+				<artifactId>scala-compiler</artifactId>
+				<scope>test</scope>
 			</dependency>
 
 		</dependencies>

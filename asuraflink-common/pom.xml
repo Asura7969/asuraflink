@@ -36,5 +36,56 @@
             <groupId>org.realityforge.org.jetbrains.annotations</groupId>
             <artifactId>org.jetbrains.annotations</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>JUnit</groupId>
+            <artifactId>JUnit</artifactId>
+            <version>${junit.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-common</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-json</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- JSON RowData schema test dependency -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-planner-blink_${scala.binary.version}</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Json filesystem format factory ITCase test dependency -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-planner-blink_${scala.binary.version}</artifactId>
+            <scope>test</scope>
+            <type>test-jar</type>
+        </dependency>
+
+        <!-- test utils dependency -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-test-utils_${scala.binary.version}</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- JSON RowData schema test dependency -->
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-compiler</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>JUnit</groupId>
+            <artifactId>JUnit</artifactId>
+        </dependency>
     </dependencies>
 </project>
