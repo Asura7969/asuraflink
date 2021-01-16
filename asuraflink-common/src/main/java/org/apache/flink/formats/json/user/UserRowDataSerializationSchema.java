@@ -32,10 +32,10 @@ public class UserRowDataSerializationSchema implements SerializationSchema<RowDa
                 mapNullKeyLiteral);
     }
 
-    @Override
-    public void open(InitializationContext context) {
-        reuse = new GenericRowData(rowType.getFieldCount());
-    }
+//    @Override
+//    public void open(InitializationContext context) {
+//        reuse = new GenericRowData(rowType.getFieldCount());
+//    }
 
     @Override
     public byte[] serialize(RowData row) {
