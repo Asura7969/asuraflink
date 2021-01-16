@@ -15,12 +15,10 @@
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-java</artifactId>
-            <version>${flink.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>
-            <artifactId>flink-streaming-java_2.11</artifactId>
-            <version>${flink.version}</version>
+            <artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>
@@ -38,35 +36,26 @@
         </dependency>
 
         <dependency>
-            <groupId>JUnit</groupId>
-            <artifactId>JUnit</artifactId>
-            <version>${junit.version}</version>
-        </dependency>
-
-        <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-table-common</artifactId>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-json</artifactId>
-            <scope>provided</scope>
         </dependency>
 
         <!-- JSON RowData schema test dependency -->
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-table-planner-blink_${scala.binary.version}</artifactId>
-            <scope>test</scope>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.apache.flink</groupId>-->
+<!--            <artifactId>flink-table-planner-blink_${scala.binary.version}</artifactId>-->
+<!--        </dependency>-->
 
         <!-- Json filesystem format factory ITCase test dependency -->
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-table-planner-blink_${scala.binary.version}</artifactId>
-            <scope>test</scope>
-            <type>test-jar</type>
+<!--            <scope>test</scope>-->
+<!--            <type>test-jar</type>-->
         </dependency>
 
         <!-- test utils dependency -->
