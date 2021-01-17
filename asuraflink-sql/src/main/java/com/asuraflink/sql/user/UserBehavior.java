@@ -99,10 +99,6 @@ public class UserBehavior {
 
 
         tEnv.executeSql(sessionSql).print();
-
-//        SELECT TUMBLE_START(user_action_time, INTERVAL '10' MINUTE), COUNT(DISTINCT user_name)
-//        FROM user_actions
-//        GROUP BY TUMBLE(user_action_time, INTERVAL '10' MINUTE);
         tEnv.execute("SQL Job");
     }
 
