@@ -7,6 +7,9 @@ import org.apache.flink.table.api.TableEnvironment;
 /**
  * 窗口函数:
  * https://segmentfault.com/a/1190000023296719
+ * 时间处理函数：
+ * https://help.aliyun.com/knowledge_list/62717.html?spm=a2c4g.11186623.2.5.7afc215f1SEjNr&page=1
+ *
  */
 public class UserBehavior {
 
