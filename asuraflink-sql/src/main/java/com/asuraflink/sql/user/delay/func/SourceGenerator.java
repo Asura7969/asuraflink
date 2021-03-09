@@ -4,17 +4,19 @@ import com.asuraflink.sql.user.delay.model.Order;
 import com.asuraflink.sql.user.delay.model.Pay;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * 延迟消息
  */
 public class SourceGenerator implements Serializable {
-    public final LinkedBlockingDeque<Pay> queue = new LinkedBlockingDeque<>();
-    public final LinkedBlockingDeque<Order> orderQueue = new LinkedBlockingDeque<>();
+    public final LinkedBlockingQueue<Pay> queue = new LinkedBlockingQueue<>();
+    public final LinkedBlockingQueue<Order> orderQueue = new LinkedBlockingQueue<>();
 
 
     public static List<Order> orderMetaData = new ArrayList<>();
@@ -48,25 +50,30 @@ public class SourceGenerator implements Serializable {
     private Random r = new Random();
 
     public void generatorOrder(long time) {
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 10; i++) {
             sleep(time);
             Order orderMeta = orderMetaData.get(i);
             long currTime = System.currentTimeMillis();
-            Order order = new Order(Long.parseLong(i + ""), orderMeta.getProduct(), i, currTime, orderMeta.getOrderId());
-            orderQueue.addLast(order);
+            Order order = new Order(Long.parseLong(i + ""), orderMeta.getProduct(), i, new Timestamp(currTime), orderMeta.getOrderId());
+            orderQueue.add(order);
+            if (i == 9) {
+                i = -1;
+            }
         }
 
     }
 
     public void generatorPay(long time) {
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 10; i++) {
             sleep(time);
             Order orderMeta = orderMetaData.get(i);
             long currTime = System.currentTimeMillis();
-            long payTime = currTime + 3000;
             Pay payMeta = payMetaData.get(i);
-            Pay pay = new Pay(Long.parseLong(i + ""), i * 100, orderMeta.getOrderId(), payMeta.getPayId(), payTime);
+            Pay pay = new Pay(Long.parseLong(i + ""), i * 100, orderMeta.getOrderId(), payMeta.getPayId(), new Timestamp(currTime));
             queue.add(pay);
+            if (i == 9) {
+                i = -1;
+            }
         }
     }
 
@@ -76,5 +83,16 @@ public class SourceGenerator implements Serializable {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private String generateTimestamp(long time) {
+        Date date = new Date(time);
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        df.setTimeZone(new SimpleTimeZone(0, "GMT"));
+        return df.format(date);
+    }
+
+    public static void main(String[] args) {
+        System.out.println(Instant.now().toEpochMilli());
     }
 }

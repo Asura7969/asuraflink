@@ -4,12 +4,12 @@ import com.asuraflink.sql.user.delay.model.Order;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
 
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class OrderSourceFunc extends RichSourceFunction<Order> {
     private SourceGenerator generator;
     private long sleepTime;
-    private LinkedBlockingDeque<Order> deque;
+    private LinkedBlockingQueue<Order> deque;
 
     public OrderSourceFunc(long sleepTime) {
         this.generator = new SourceGenerator();
@@ -32,8 +32,12 @@ public class OrderSourceFunc extends RichSourceFunction<Order> {
     @Override
     public void run(SourceContext<Order> ctx) throws Exception {
         for (;;) {
+            Object lock = ctx.getCheckpointLock();
             Order order = deque.take();
-            ctx.collect(order);
+//            System.out.println(order.toString());
+            synchronized (lock) {
+                ctx.collect(order);
+            }
         }
 
     }

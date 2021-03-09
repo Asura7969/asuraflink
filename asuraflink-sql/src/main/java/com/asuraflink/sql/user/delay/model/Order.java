@@ -7,6 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.io.Serializable;
+import java.sql.Timestamp;
+
 /**
  * 订单表
  */
@@ -14,11 +17,11 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Order{
+public class Order implements Serializable {
     public Long user;
     public String product;
     public int amount;
-    public long timestamp;
+    public Timestamp logTime;
     public long orderId;
 
 
@@ -33,7 +36,7 @@ public class Order{
                 "user=" + user +
                 ", product='" + product + '\'' +
                 ", amount=" + amount +
-                ", timestamp=" + TimeExchange.timestampToString(timestamp) +
+                ", logTime=" + logTime +
                 ", orderId=" + orderId +
                 '}';
     }

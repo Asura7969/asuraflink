@@ -5,11 +5,12 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
 
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class PaySourceFunc extends RichSourceFunction<Pay> {
     private SourceGenerator generator;
     private long sleepTime;
-    public LinkedBlockingDeque<Pay> queue;
+    public LinkedBlockingQueue<Pay> queue;
 
     public PaySourceFunc(long sleepTime) {
         this.generator = new SourceGenerator();
@@ -32,8 +33,11 @@ public class PaySourceFunc extends RichSourceFunction<Pay> {
     @Override
     public void run(SourceContext<Pay> ctx) throws Exception {
         for (;;) {
+            Object lock = ctx.getCheckpointLock();
             Pay pay = queue.take();
-            ctx.collect(pay);
+            synchronized (lock) {
+                ctx.collect(pay);
+            }
         }
 
     }
