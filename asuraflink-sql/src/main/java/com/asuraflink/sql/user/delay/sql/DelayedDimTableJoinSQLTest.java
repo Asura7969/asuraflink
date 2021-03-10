@@ -28,11 +28,13 @@ import static org.apache.flink.table.api.Expressions.$;
  */
 public class DelayedDimTableJoinSQLTest {
 
+    private static final String topic = "order-stream";
+
     private static final String withKafka =
             "WITH (\n" +
             "    'connector.type' = 'kafka',\n" +
             "    'connector.version' = 'universal',\n" +
-            "    'connector.topic' = 'order-stream',\n" +
+            "    'connector.topic' = '" + topic + "',\n" +
             "    'connector.startup-mode' = 'earliest-offset',\n" +
             "    'connector.properties.0.key' = 'zookeeper.connect',\n" +
             "    'connector.properties.0.value' = 'localhost:2181',\n" +
