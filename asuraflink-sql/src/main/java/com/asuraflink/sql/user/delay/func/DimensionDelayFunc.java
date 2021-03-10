@@ -46,6 +46,7 @@ public class DimensionDelayFunc<T>
     private Thread collectThread;
     private Thread retryThread;
 
+
     public DimensionDelayFunc(DelayOption option, ReadHelper<T> readHelper) {
         this.option = option;
         this.delayTime = option.getDelayTime().toMillis();
