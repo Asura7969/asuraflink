@@ -18,6 +18,8 @@ import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.DelayQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class DimensionDelayFunc<T>
@@ -36,6 +38,10 @@ public class DimensionDelayFunc<T>
 
     private ListState<T> paperElementState;
     private ListState<RetryerElement<Object>> delayState;
+
+    // TODO:
+    private ExecutorService collectService = Executors.newFixedThreadPool(1);
+    private ExecutorService retryService = Executors.newFixedThreadPool(1);
 
     private Thread collectThread;
     private Thread retryThread;
