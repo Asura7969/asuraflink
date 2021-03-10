@@ -1,22 +1,23 @@
 package com.asuraflink.sql.user.delay.utils;
 
+import java.io.Serializable;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class RetryerElement<T> implements Delayed {
+public class RetryerElement<T> implements Delayed, Serializable {
     private T value;
     private long time;
-    private int times = 1;
+    private AtomicInteger times = new AtomicInteger(1);
 
-    public RetryerElement(T value, long time, int times) {
+    public RetryerElement(T value, long time, AtomicInteger times) {
         this.value = value;
         this.time = time;
         this.times = times;
     }
 
-    public RetryerElement<T> reset(long delay) {
+    public RetryerElement<T> resetTime(long delay) {
         this.time = System.currentTimeMillis() + delay;
-        this.times += 1;
         return this;
     }
 
@@ -42,10 +43,14 @@ public class RetryerElement<T> implements Delayed {
     }
 
     public int getTimes() {
-        return times;
+        return times.get();
     }
 
-    public void setTimes(int times) {
+    public int incrementAndGet() {
+        return times.incrementAndGet();
+    }
+
+    public void setTimes(AtomicInteger times) {
         this.times = times;
     }
 

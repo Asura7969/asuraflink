@@ -8,11 +8,13 @@ public class DelayOption implements Serializable {
     private final Duration delayTime;
     private final Duration intervalDuration;
     private final int maxRetryTimes;
+    private final boolean ignoreExpiredData;
 
-    public DelayOption(Duration delayTime, Duration intervalDuration, int maxRetryTimes) {
+    public DelayOption(Duration delayTime, Duration intervalDuration, int maxRetryTimes, boolean ignoreExpiredData) {
         this.delayTime = delayTime;
         this.intervalDuration = intervalDuration;
         this.maxRetryTimes = maxRetryTimes;
+        this.ignoreExpiredData = ignoreExpiredData;
     }
 
     public int getMaxRetryTimes() {
@@ -27,6 +29,10 @@ public class DelayOption implements Serializable {
         return intervalDuration;
     }
 
+    public boolean getIgnoreExpiredData() {
+        return ignoreExpiredData;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -39,6 +45,7 @@ public class DelayOption implements Serializable {
         private Duration delayTime = Duration.ofSeconds(5);
         private Duration intervalDuration = Duration.ofSeconds(2);
         private int maxRetryTimes = 3;
+        private boolean ignoreExpiredData = true;
 
         public Builder setDelayTime(Duration delayTime) {
             this.delayTime = delayTime;
@@ -55,8 +62,13 @@ public class DelayOption implements Serializable {
             return this;
         }
 
+        public Builder setIgnoreExpiredData(boolean ignoreExpiredData) {
+            this.ignoreExpiredData = ignoreExpiredData;
+            return this;
+        }
+
         public DelayOption build() {
-            return new DelayOption(delayTime, intervalDuration, maxRetryTimes);
+            return new DelayOption(delayTime, intervalDuration, maxRetryTimes, ignoreExpiredData);
         }
     }
 }
