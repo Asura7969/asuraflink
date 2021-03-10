@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class RetryerElement<T> implements Delayed, Serializable {
     private T value;
+    private T[] values;
     private long time;
     private AtomicInteger times = new AtomicInteger(1);
 
@@ -23,6 +24,12 @@ public class RetryerElement<T> implements Delayed, Serializable {
 
     public RetryerElement(T value, long time) {
         this.value = value;
+        this.time = time;
+    }
+
+    @SafeVarargs
+    public RetryerElement(long time, T... values) {
+        this.values = values;
         this.time = time;
     }
 
@@ -52,6 +59,14 @@ public class RetryerElement<T> implements Delayed, Serializable {
 
     public void setTimes(AtomicInteger times) {
         this.times = times;
+    }
+
+    public T[] getValues() {
+        return values;
+    }
+
+    public void setValues(T[] values) {
+        this.values = values;
     }
 
     @Override

@@ -9,20 +9,30 @@ import org.apache.flink.table.types.inference.TypeInference;
  *
  * @param <T>
  */
-public interface ReadHelper<T> {
-    public void open();
+public abstract class ReadHelper<IN, OUT> {
+    abstract public void open();
 
-    public void close();
+    abstract public void close();
 
-    public T eval(Object o);
+    public OUT eval(IN o) {
+        return null;
+    }
 
-    public T eval(Object... values);
+    public OUT eval(IN... values) {
+        return null;
+    }
 
-    public TypeInference getTypeInference(DataTypeFactory typeFactory);
+    public TypeInference getTypeInference(DataTypeFactory typeFactory) {
+        return null;
+    }
 
     @Deprecated
-    public TypeInformation<T> getResultType();
+    public TypeInformation<OUT> getResultType() {
+        return null;
+    }
 
     @Deprecated
-    public TypeInformation<?>[] getParameterTypes(Class<?>[] signature);
+    public TypeInformation<?>[] getParameterTypes(Class<?>[] signature) {
+        return null;
+    }
 }

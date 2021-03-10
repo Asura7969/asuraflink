@@ -8,46 +8,42 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
-import org.apache.flink.streaming.runtime.tasks.ProcessingTimeCallback;
 import org.apache.flink.table.catalog.DataTypeFactory;
 import org.apache.flink.table.functions.FunctionContext;
 import org.apache.flink.table.functions.TableFunction;
 import org.apache.flink.table.types.inference.TypeInference;
 
-import java.lang.reflect.ParameterizedType;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.concurrent.DelayQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
 
-public class DimensionDelayFunc<T>
-        extends TableFunction<T>
-        implements CheckpointedFunction, ProcessingTimeCallback {
+public class DimensionDelayFunc<IN, OUT>
+        extends TableFunction<OUT>
+        implements CheckpointedFunction {
 
-    private DelayOption option;
-    private ReadHelper<T> readHelper;
-    private DelayQueue<RetryerElement<Object>> delayQueue;
-    private long delayTime;
-    private LinkedBlockingQueue<T> paperElements;
+    private final DelayOption option;
+
+    private final ReadHelper<IN, OUT> readHelper;
+
+    private final DelayQueue<RetryerElement<IN>> delayQueue;
+
+    private final long delayTime;
+
+    private final LinkedBlockingQueue<OUT> paperElements;
+
     private volatile boolean running;
+
     /* 是否忽略过期数据, 主要用户 flink failover时候 state数据回放处理; true:忽略，false：不忽略 */
-    private boolean ignoreExpiredData;
-//    private Retryer<Boolean> retryer;
+    private final boolean ignoreExpiredData;
 
-    private ListState<T> paperElementState;
-    private ListState<RetryerElement<Object>> delayState;
+    private ListState<OUT> paperElementState;
 
-    // TODO:
-    private ExecutorService collectService = Executors.newFixedThreadPool(1);
-    private ExecutorService retryService = Executors.newFixedThreadPool(1);
+    private ListState<RetryerElement<IN>> delayState;
 
-    private Thread collectThread;
-    private Thread retryThread;
+    private final ExecutorService collectService;
 
+    private final ExecutorService retryService;
 
-    public DimensionDelayFunc(DelayOption option, ReadHelper<T> readHelper) {
+    public DimensionDelayFunc(DelayOption option, ReadHelper<IN, OUT> readHelper) {
         this.option = option;
         this.delayTime = option.getDelayTime().toMillis();
         this.ignoreExpiredData = option.getIgnoreExpiredData();
@@ -55,48 +51,24 @@ public class DimensionDelayFunc<T>
         this.delayQueue = new DelayQueue<>();
         this.paperElements = new LinkedBlockingQueue<>();
 
-        this.collectThread = new Thread(() -> {
-            try {
-                while (running) {
-                    T e = paperElements.take();
-                    collect(e);
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
-            }
-        }, "dimensionDelayFunc-collectThread");
+        this.collectService = Executors.newFixedThreadPool(1,
+                r -> new Thread(r, "dimensionDelayFunc-collectThread"));
 
-        this.retryThread = new Thread(() -> {
-            try {
-                while (running) {
-                    RetryerElement<Object> take = delayQueue.take();
-                    T tmpResult = readHelper.eval(take.getValue());
-                    if (null == tmpResult) {
-                        if (!(take.incrementAndGet() > option.getMaxRetryTimes())) {
-                            delayQueue.add(take.resetTime(delayTime));
-                        }
-                    } else {
-                        paperElements.add(tmpResult);
-                    }
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
-            }
-        }, "dimensionDelayFunc-retryThread");
+        this.retryService = Executors.newFixedThreadPool(1,
+                r -> new Thread(r, "dimensionDelayFunc-retryThread"));
+
     }
 
     @Override
     public void open(FunctionContext context) throws Exception {
         running = true;
         readHelper.open();
-        collectThread.start();
-        retryThread.start();
+        collectService.execute(new CollectTask());
+        retryService.execute(new RetryTask());
     }
 
     @Override
-    public TypeInformation<T> getResultType() {
+    public TypeInformation<OUT> getResultType() {
         return readHelper.getResultType();
     }
 
@@ -105,8 +77,8 @@ public class DimensionDelayFunc<T>
         return readHelper.getParameterTypes(signature);
     }
 
-    public void eval(Object value) {
-        T tmpResult = readHelper.eval(value);
+    public void eval(IN value) {
+        OUT tmpResult = readHelper.eval(value);
         if (null == tmpResult) {
             delayQueue.add(new RetryerElement<>(value, delayTime + System.currentTimeMillis()));
         } else {
@@ -114,10 +86,10 @@ public class DimensionDelayFunc<T>
         }
     }
 
-    public void eval(Object... value) {
-        T tmpResult = readHelper.eval(value);
+    public void eval(IN... value) {
+        OUT tmpResult = readHelper.eval(value);
         if (null == tmpResult) {
-            delayQueue.add(new RetryerElement<>(value, delayTime + System.currentTimeMillis()));
+            delayQueue.add(new RetryerElement<>(delayTime + System.currentTimeMillis(), value));
         } else {
             paperElements.add(tmpResult);
         }
@@ -134,6 +106,12 @@ public class DimensionDelayFunc<T>
     @Override
     public void close() throws Exception {
         running = false;
+        if (retryService.isShutdown()) {
+            retryService.shutdown();
+        }
+        if (collectService.isShutdown()) {
+            collectService.shutdown();
+        }
         readHelper.close();
     }
 
@@ -142,23 +120,23 @@ public class DimensionDelayFunc<T>
         return readHelper.getTypeInference(typeFactory);
     }
 
-    public static <T> DimensionDelayFunc<T> of(DelayOption option, ReadHelper<T> readHelper) {
+    public static <IN, OUT> DimensionDelayFunc<IN, OUT> of(DelayOption option, ReadHelper<IN, OUT> readHelper) {
         return new DimensionDelayFunc<>(option, readHelper);
     }
 
     @Override
     public void snapshotState(FunctionSnapshotContext context) throws Exception {
         paperElementState.clear();
-        Iterator<T> paperElementsIt = paperElements.iterator();
+        Iterator<OUT> paperElementsIt = paperElements.iterator();
         while (paperElementsIt.hasNext()) {
-            T next = paperElementsIt.next();
+            OUT next = paperElementsIt.next();
             paperElementState.add(next);
         }
 
         delayState.clear();
-        Iterator<RetryerElement<Object>> delayIt = delayQueue.iterator();
+        Iterator<RetryerElement<IN>> delayIt = delayQueue.iterator();
         while (delayIt.hasNext()) {
-            RetryerElement<Object> next = delayIt.next();
+            RetryerElement<IN> next = delayIt.next();
             delayState.add(next);
         }
     }
@@ -166,14 +144,14 @@ public class DimensionDelayFunc<T>
     @Override
     public void initializeState(FunctionInitializationContext context) throws Exception {
 
-        ListStateDescriptor<T> paperElementStateDesc =
+        ListStateDescriptor<OUT> paperElementStateDesc =
                 new ListStateDescriptor<>("paperElementState-listState",
-                        TypeInformation.of(new TypeHint<T>() {}));
+                        TypeInformation.of(new TypeHint<OUT>() {}));
         paperElementState = context.getOperatorStateStore().getListState(paperElementStateDesc);
 
-        ListStateDescriptor<RetryerElement<Object>> delayStateDesc =
+        ListStateDescriptor<RetryerElement<IN>> delayStateDesc =
                 new ListStateDescriptor<>("delayState-listState",
-                        TypeInformation.of(new TypeHint<RetryerElement<Object>>() {}));
+                        TypeInformation.of(new TypeHint<RetryerElement<IN>>() {}));
         delayState = context.getOperatorStateStore().getListState(delayStateDesc);
 
         if (context.isRestored()) {
@@ -192,8 +170,46 @@ public class DimensionDelayFunc<T>
         }
     }
 
-    @Override
-    public void onProcessingTime(long timestamp) throws Exception {
+    /**
+     * 延迟重试任务
+     */
+    class RetryTask implements Runnable {
+        @Override
+        public void run() {
+            try {
+                while (running) {
+                    RetryerElement<IN> take = delayQueue.take();
+                    OUT tmpResult = readHelper.eval(take.getValue());
+                    if (null == tmpResult) {
+                        if (!(take.incrementAndGet() > option.getMaxRetryTimes())) {
+                            delayQueue.add(take.resetTime(delayTime));
+                        }
+                    } else {
+                        paperElements.add(tmpResult);
+                    }
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            }
+        }
+    }
 
+    /**
+     * 往下游 operator 发送数据
+     */
+    class CollectTask implements Runnable {
+        @Override
+        public void run() {
+            try {
+                while (running) {
+                    OUT e = paperElements.take();
+                    collect(e);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            }
+        }
     }
 }

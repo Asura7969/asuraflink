@@ -1,5 +1,6 @@
-package com.asuraflink.sql.user.delay;
+package com.asuraflink.sql.user.delay.dstream;
 
+import com.asuraflink.sql.user.delay.func.DelayOption;
 import com.asuraflink.sql.user.delay.func.OrderSourceFunc;
 import com.asuraflink.sql.user.delay.func.PaySourceFunc;
 import com.asuraflink.sql.user.delay.func.SourceGenerator;
@@ -32,7 +33,7 @@ import static org.apache.flink.table.api.Expressions.$;
  *
  * 延迟维表 join
  */
-public class DelayedDimensionTableJoinTest {
+public class DelayedDimTableJoinDSTest {
 
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -59,6 +60,15 @@ public class DelayedDimensionTableJoinTest {
                         .<Pay>forBoundedOutOfOrderness(Duration.ofMillis(10))
                         .withIdleness(Duration.ofMinutes(1))
                         .withTimestampAssigner((element, recordTimestamp) -> Math.max(element.getTtl().getTime(), recordTimestamp)));
+
+        DelayOption delayOption = new DelayOption.Builder()
+                .setDelayTime(Duration.ofSeconds(10))
+                .setIgnoreExpiredData(false)
+                .setIntervalDuration(Duration.ofSeconds(5))
+                .setMaxRetryTimes(3)
+                .build();
+
+
 
         // rowtime 定义表
         Table orderTable = tEnv.fromDataStream(orderWatermarkStream,
