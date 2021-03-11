@@ -5,6 +5,7 @@ import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.calcite.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
@@ -13,22 +14,23 @@ import org.apache.flink.table.functions.FunctionContext;
 import org.apache.flink.table.functions.TableFunction;
 import org.apache.flink.table.types.inference.TypeInference;
 
+import java.io.Serializable;
 import java.util.Iterator;
 import java.util.concurrent.*;
 
 public class DimensionDelayFunc<IN, OUT>
         extends TableFunction<OUT>
-        implements CheckpointedFunction {
+        implements CheckpointedFunction, Serializable {
 
     private final DelayOption option;
 
-    private final ReadHelper<IN, OUT> readHelper;
+    private final transient ReadHelper<IN, OUT> readHelper;
 
-    private final DelayQueue<RetryerElement<IN>> delayQueue;
+    private DelayQueue<RetryerElement<IN>> delayQueue;
 
     private final long delayTime;
 
-    private final LinkedBlockingQueue<OUT> paperElements;
+    private LinkedBlockingQueue<OUT> paperElements;
 
     private volatile boolean running;
 
@@ -39,28 +41,26 @@ public class DimensionDelayFunc<IN, OUT>
 
     private ListState<RetryerElement<IN>> delayState;
 
-    private final ExecutorService collectService;
+    private ExecutorService collectService;
 
-    private final ExecutorService retryService;
+    private ExecutorService retryService;
 
     public DimensionDelayFunc(DelayOption option, ReadHelper<IN, OUT> readHelper) {
         this.option = option;
         this.delayTime = option.getDelayTime().toMillis();
         this.ignoreExpiredData = option.getIgnoreExpiredData();
         this.readHelper = readHelper;
+    }
+
+    @Override
+    public void open(FunctionContext context) throws Exception {
         this.delayQueue = new DelayQueue<>();
         this.paperElements = new LinkedBlockingQueue<>();
-
         this.collectService = Executors.newFixedThreadPool(1,
                 r -> new Thread(r, "dimensionDelayFunc-collectThread"));
 
         this.retryService = Executors.newFixedThreadPool(1,
                 r -> new Thread(r, "dimensionDelayFunc-retryThread"));
-
-    }
-
-    @Override
-    public void open(FunctionContext context) throws Exception {
         running = true;
         readHelper.open();
         collectService.execute(new CollectTask());

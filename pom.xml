@@ -358,6 +358,18 @@ under the License.
 				<version>3.3.0</version>
 			</dependency>
 
+			<dependency>
+				<groupId>org.apache.bahir</groupId>
+				<artifactId>flink-connector-redis_2.11</artifactId>
+				<version>1.0</version>
+			</dependency>
+
+			<dependency>
+				<groupId>io.vertx</groupId>
+				<artifactId>vertx-redis-client</artifactId>
+				<version>4.0.2</version>
+			</dependency>
+
 <!--			<dependency>-->
 <!--				<groupId>com.github.rholder</groupId>-->
 <!--				<artifactId>guava-retrying</artifactId>-->

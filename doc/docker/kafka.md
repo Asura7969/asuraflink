@@ -6,9 +6,16 @@
 > docker pull wurstmeister/zookeeper
 > 
 > docker pull wurstmeister/kafka
+>
+> docker pull redis
 
 ### 启动
 ```sh
+## 启动redis
+docker run -d --name redis -p 6379:6379 redis
+
+redis-cli -h localhost
+
 ## 启动server
 docker run -d --name zookeeper -p 2181:2181 wurstmeister/zookeeper
 ### 运行完以上命令会显示容器ID
