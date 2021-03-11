@@ -18,6 +18,9 @@ import java.util.Set;
 
 import static org.apache.flink.table.factories.FactoryUtil.createTableFactoryHelper;
 
+/**
+ * https://www.jianshu.com/p/9dfd932af0af
+ */
 public class RedisDynamicTableFactory implements DynamicTableSourceFactory, DynamicTableSinkFactory {
 
     @Override
