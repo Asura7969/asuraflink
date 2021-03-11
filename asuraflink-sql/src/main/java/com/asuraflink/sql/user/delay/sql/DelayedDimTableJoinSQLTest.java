@@ -61,8 +61,8 @@ public class DelayedDimTableJoinSQLTest {
 
         RedisReadHelper externalReadHelper = new RedisReadHelper();
 
-        DimensionDelayFunc<Long, Pay> delayFunc = new DimensionDelayFunc<>(delayOption, externalReadHelper);
-        tEnv.createTemporarySystemFunction("delayFunc", delayFunc);
+//        DimensionDelayFunc<Long, Pay> delayFunc = new DimensionDelayFunc<>(delayOption, externalReadHelper);
+        tEnv.createTemporarySystemFunction("delayFunc", DimensionDelayFunc.class);
 
         // perform a temporal table join query
         // 参考：https://blog.csdn.net/wangpei1949/article/details/105335340

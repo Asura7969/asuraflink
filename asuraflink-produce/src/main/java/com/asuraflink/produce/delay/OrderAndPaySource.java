@@ -121,54 +121,13 @@ public class OrderAndPaySource {
      */
     public static void main(String[] args) throws InterruptedException {
 
-//        Jedis jedis = new Jedis("localhost", 6379);
-////        jedis.auth("");
-//        jedis.select(0);
-//        OrderAndPaySource source = new OrderAndPaySource(createKafkaProduce(), jedis, "order-stream");
-////        source.run();
+        Jedis jedis = new Jedis("localhost", 6379);
+//        jedis.auth("");
+        jedis.select(0);
+        OrderAndPaySource source = new OrderAndPaySource(createKafkaProduce(), jedis, "order-stream");
+        source.run();
 
 
 
-        RedisOptions config = new RedisOptions();
-        // redis://[username:password@][host][:port][/[database]
-        String connectionString = String.format("redis://%s:%s@%s:%d/%d",
-                "","", "localhost",
-                6379,0);
-        System.out.println(connectionString);
-        config.setConnectionString(connectionString);
-
-        VertxOptions vo = new VertxOptions();
-        vo.setEventLoopPoolSize(1);
-        vo.setWorkerPoolSize(2);
-
-        Vertx vertx = Vertx.vertx(vo);
-
-        RedisClient redisClient = new RedisClient(vertx, config);
-
-        Redis connect = redisClient.send(Request.cmd(Command.GET).arg("1"), new Handler<AsyncResult<Response>>() {
-            @Override
-            public void handle(AsyncResult<Response> event) {
-                System.out.println(event.result().toString());
-            }
-        });
-
-//                .onComplete(res -> {
-//                    if (res.succeeded()) {
-//                        System.out.println("成功");
-//                        res.result().attributes().forEach((k, v) -> {
-//                            System.out.println(k + " : " + v);
-//                        });
-//                    } else {
-//                        throw new RuntimeException(res.cause().getMessage());
-//                    }
-//                });
-//        Thread.sleep(10000);
-
-//        while (!redis.isComplete()) {
-//
-//        }
-//        redisClient.close();
-//
-//        vertx.close();
     }
 }
