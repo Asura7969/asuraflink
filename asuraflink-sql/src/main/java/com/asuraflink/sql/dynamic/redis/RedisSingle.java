@@ -8,7 +8,7 @@ import java.io.IOException;
 
 @Slf4j
 public class RedisSingle {
-    private JedisPool jedisPool;
+    private final JedisPool jedisPool;
 
     public RedisSingle(JedisPool jedisPool) {
         this.jedisPool = jedisPool;
