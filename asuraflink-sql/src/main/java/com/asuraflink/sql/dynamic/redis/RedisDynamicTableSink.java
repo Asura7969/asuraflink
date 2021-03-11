@@ -42,8 +42,6 @@ public class RedisDynamicTableSink implements DynamicTableSink {
     public SinkRuntimeProvider getSinkRuntimeProvider(Context context) {
         Preconditions.checkNotNull(options, "No options supplied");
 
-
-
         FlinkJedisPoolConfig jedisConfig = new FlinkJedisPoolConfig.Builder()
                 .setHost(options.get(SINGLE_HOST))
                 .setPort(options.get(SINGLE_PORT))
