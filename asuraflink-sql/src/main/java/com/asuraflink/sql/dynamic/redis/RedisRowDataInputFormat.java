@@ -26,28 +26,22 @@ import static com.asuraflink.sql.dynamic.redis.RedisDynamicTableFactory.DB_NUM;
 
 @Slf4j
 public class RedisRowDataInputFormat implements InputFormat<RowData, InputSplit> {
-    private int count;
-    private String matchKey;
-    private String redisCommand;
-    private ReadableConfig options;
 
-    private RedisSingle redisSingle;
+    private final String redisCommand;
+    private final RedisSingle redisSingle;
     private String cursor;
-    private ScanParams scanParams;
+    private final ScanParams scanParams;
     private String additionalKey;
     private InnerIterator<?> currentIter;
 
     private transient boolean hasNext;
 
     public RedisRowDataInputFormat(int count, String matchKey, String additionalKey, String redisCommand, ReadableConfig options) {
-        this.count = count;
-        this.matchKey = matchKey;
         this.redisCommand = redisCommand;
         if (redisCommand.toUpperCase().equals("HSCAN")) {
             Preconditions.checkArgument(null != additionalKey, "hscan must have additionalKey");
             this.additionalKey = additionalKey;
         }
-        this.options = options;
         this.cursor = ScanParams.SCAN_POINTER_START;
         this.scanParams = new ScanParams().count(count).match(matchKey);
 
