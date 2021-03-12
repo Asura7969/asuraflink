@@ -29,7 +29,7 @@ public class RedisRowDataLookupFunction extends TableFunction<RowData> {
     public RedisRowDataLookupFunction(ReadableConfig options) {
         Preconditions.checkNotNull(options, "No options supplied");
         this.options = options;
-        this.additionalKey = options.get(LOOKUP_ADDITIONAL_KEY);
+        this.additionalKey = options.get(ADDITIONAL_KEY);
 
         command = options.get(COMMAND).toUpperCase();
         Preconditions.checkArgument(command.equals("GET") ||

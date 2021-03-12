@@ -75,7 +75,9 @@ public class RedisDynamicTableFactory implements DynamicTableSourceFactory, Dyna
         optionalOptions.add(CONNECTION_TEST_ON_BORROW);
         optionalOptions.add(CONNECTION_TEST_ON_RETURN);
         optionalOptions.add(CONNECTION_TEST_WHILE_IDLE);
-        optionalOptions.add(LOOKUP_ADDITIONAL_KEY);
+        optionalOptions.add(ADDITIONAL_KEY);
+        optionalOptions.add(MATCH_KEY);
+        optionalOptions.add(SCAN_COUNT);
         return optionalOptions;
     }
 
@@ -122,10 +124,18 @@ public class RedisDynamicTableFactory implements DynamicTableSourceFactory, Dyna
             .key("command")
             .stringType()
             .noDefaultValue();
+    public static final ConfigOption<String> MATCH_KEY = ConfigOptions
+            .key("match-key")
+            .stringType()
+            .defaultValue("*");
     public static final ConfigOption<Integer> DB_NUM = ConfigOptions
             .key("db-num")
             .intType()
             .defaultValue(Protocol.DEFAULT_DATABASE);
+    public static final ConfigOption<Integer> SCAN_COUNT = ConfigOptions
+            .key("scan-count")
+            .intType()
+            .defaultValue(100);
     public static final ConfigOption<Integer> CONNECTION_TIMEOUT_MS = ConfigOptions
             .key("connection.timeout-ms")
             .intType()
@@ -154,8 +164,8 @@ public class RedisDynamicTableFactory implements DynamicTableSourceFactory, Dyna
             .key("connection.test-while-idle")
             .booleanType()
             .defaultValue(GenericObjectPoolConfig.DEFAULT_TEST_WHILE_IDLE);
-    public static final ConfigOption<String> LOOKUP_ADDITIONAL_KEY = ConfigOptions
-            .key("lookup.additional-key")
+    public static final ConfigOption<String> ADDITIONAL_KEY = ConfigOptions
+            .key("additional-key")
             .stringType()
             .noDefaultValue();
 }
