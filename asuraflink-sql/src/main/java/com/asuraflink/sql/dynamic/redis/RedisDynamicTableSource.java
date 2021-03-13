@@ -4,7 +4,6 @@ import com.asuraflink.sql.dynamic.redis.config.RedisLookupOptions;
 import com.asuraflink.sql.dynamic.redis.config.RedisOptions;
 import com.asuraflink.sql.dynamic.redis.config.RedisReadOptions;
 import org.apache.flink.calcite.shaded.com.google.common.base.Preconditions;
-import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.connector.ChangelogMode;

@@ -3,8 +3,6 @@ package com.asuraflink.sql.dynamic.redis.test;
 import com.alibaba.fastjson.JSONObject;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
-import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -15,6 +13,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+
+/**
+ * 相关组件环境安装：https://github.com/Asura7969/asuraflink/blob/main/doc/docker/kafka.md
+ */
 public class RedisSourceTest {
 
     public static Map<String, String> cityInfo = new HashMap<>();
@@ -57,7 +59,7 @@ public class RedisSourceTest {
 //                "  'lookup.cache.ttl-sec' = '600'\n" +
                 ")";
 
-        tEnv.sqlUpdate(redisDDL);
+        tEnv.executeSql(redisDDL);
 
         String printSink =
                 "CREATE TABLE print_redis_test_dim_join (\n" +
@@ -97,7 +99,7 @@ public class RedisSourceTest {
                         "    'format.type' = 'json',\n" +
                         "    'format.derive-schema' = 'true'\n" +
                         ")";
-        tEnv.sqlUpdate(kafka);
+        tEnv.executeSql(kafka);
 
         String query =
                 "INSERT INTO print_redis_test_dim_join\n" +
@@ -132,7 +134,6 @@ public class RedisSourceTest {
             props.put("bootstrap.servers", "localhost:9092");
             props.put("acks", "all");
             props.put("retries", 0);
-//        props.put("batch.size", 16384);
             props.put("key.serializer", StringSerializer.class.getName());
             props.put("value.serializer", StringSerializer.class.getName());
             KafkaProducer<String, String> producer = new KafkaProducer<>(props);
