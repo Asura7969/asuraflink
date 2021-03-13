@@ -1,60 +1,76 @@
 package com.asuraflink.sql.dynamic.redis;
 
+import com.asuraflink.sql.dynamic.redis.config.RedisOptions;
+import com.asuraflink.sql.dynamic.redis.config.RedisReadOptions;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.apache.flink.api.common.io.DefaultInputSplitAssigner;
 import org.apache.flink.api.common.io.InputFormat;
+import org.apache.flink.api.common.io.RichInputFormat;
 import org.apache.flink.api.common.io.statistics.BaseStatistics;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.calcite.shaded.com.google.common.base.Preconditions;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.core.io.GenericInputSplit;
 import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.core.io.InputSplitAssigner;
 import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.data.StringData;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.ScanParams;
 import redis.clients.jedis.ScanResult;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
-import static com.asuraflink.sql.dynamic.redis.RedisDynamicTableFactory.*;
-import static com.asuraflink.sql.dynamic.redis.RedisDynamicTableFactory.DB_NUM;
-
 @Slf4j
-public class RedisRowDataInputFormat implements InputFormat<RowData, InputSplit> {
+public class RedisRowDataInputFormat extends RichInputFormat<RowData, InputSplit> implements ResultTypeQueryable<RowData> {
 
     private final String redisCommand;
-    private final RedisSingle redisSingle;
+    private RedisSingle redisSingle;
+    private final RedisOptions redisOptions;
+    private final RedisReadOptions readOptions;
     private String cursor;
-    private final ScanParams scanParams;
+    private ScanParams scanParams;
     private String additionalKey;
     private InnerIterator<?> currentIter;
+    private boolean hasNextScan;
 
     private transient boolean hasNext;
 
-    public RedisRowDataInputFormat(int count, String matchKey, String additionalKey, String redisCommand, ReadableConfig options) {
-        this.redisCommand = redisCommand;
+    public RedisRowDataInputFormat(RedisOptions redisOptions, RedisReadOptions readOptions) {
+        Preconditions.checkNotNull(redisOptions, "No options supplied");
+        this.redisOptions = redisOptions;
+        this.readOptions = readOptions;
+        this.redisCommand = redisOptions.getCommand();
         if (redisCommand.toUpperCase().equals("HSCAN")) {
-            Preconditions.checkArgument(null != additionalKey, "hscan must have additionalKey");
-            this.additionalKey = additionalKey;
+            Preconditions.checkArgument(null != redisOptions.getAdditionalKey(), "hscan must have additionalKey");
+            this.additionalKey = redisOptions.getAdditionalKey();
         }
+        this.hasNextScan = true;
+    }
+
+    @Override
+    public void openInputFormat() throws IOException {
+        super.openInputFormat();
         this.cursor = ScanParams.SCAN_POINTER_START;
-        this.scanParams = new ScanParams().count(count).match(matchKey);
+        this.scanParams = new ScanParams()
+                .count(readOptions.getScanCount())
+                .match(readOptions.getMatchKey());
 
-        GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
-        poolConfig.setMaxIdle(options.get(CONNECTION_MAX_IDLE));
-        poolConfig.setMinIdle(options.get(CONNECTION_MIN_IDLE));
-        poolConfig.setMaxTotal(options.get(CONNECTION_MAX_TOTAL));
+        this.redisSingle = RedisUtils.buildJedisPool(redisOptions);
+    }
 
-        JedisPool jedisPool = new JedisPool(poolConfig, options.get(SINGLE_HOST),
-                options.get(SINGLE_PORT), options.get(CONNECTION_TIMEOUT_MS), options.get(PASSWORD),
-                options.get(DB_NUM));
-
-        redisSingle = new RedisSingle(jedisPool);
+    @Override
+    public void closeInputFormat() throws IOException {
+        super.closeInputFormat();
+        if (null != redisSingle) {
+            redisSingle.close();
+        }
     }
 
     @Override
@@ -79,24 +95,37 @@ public class RedisRowDataInputFormat implements InputFormat<RowData, InputSplit>
 
     @Override
     public void open(InputSplit split) throws IOException {
-        switch (redisCommand.toUpperCase()){
-            case "SCAN":
-                ScanResult<String> scanR = redisSingle.scan(cursor, scanParams);
-                cursor = scanR.getCursor();
-                Iterator<String> source = scanR.getResult().iterator();
-                currentIter = new InnerIterator<>(source);
-                hasNext = !scanR.isCompleteIteration();
+        if (hasNextScan) {
+            switch (redisCommand.toUpperCase()){
+                case "SCAN":
+                    ScanResult<String> scanR = redisSingle.scan(cursor, scanParams);
+                    cursor = scanR.getCursor();
+                    List<String> scanRResult = scanR.getResult();
+                    if (scanRResult.size() > 0) {
+                        hasNext = true;
+                    }
+                    Iterator<String> source = scanRResult.iterator();
+                    currentIter = new InnerIterator<>(source);
+                    hasNextScan = !scanR.isCompleteIteration();
+                    break;
+                case "HSCAN":
+                    ScanResult<Map.Entry<String, String>> hscanR =
+                            redisSingle.hscan(additionalKey, cursor, scanParams);
+                    cursor = hscanR.getCursor();
+                    List<Map.Entry<String, String>> hscanRResult = hscanR.getResult();
+                    if (hscanRResult.size() > 0) {
+                        hasNext = true;
+                    }
+                    Iterator<Map.Entry<String, String>> hsource = hscanRResult.iterator();
 
-            case "HSCAN":
-                ScanResult<Map.Entry<String, String>> hscanR =
-                        redisSingle.hscan(additionalKey, cursor, scanParams);
-                cursor = hscanR.getCursor();
-                Iterator<Map.Entry<String, String>> hsource = hscanR.getResult().iterator();
-                currentIter = new InnerIterator<>(hsource);
-                hasNext = !hscanR.isCompleteIteration();
-
-            default:
-                log.error("Unsupport redis type: " + redisCommand);
+                    currentIter = new InnerIterator<>(hsource);
+                    hasNextScan = !hscanR.isCompleteIteration();
+                    break;
+                default:
+                    log.error("Unsupport redis type: " + redisCommand);
+            }
+        } else {
+            hasNext = false;
         }
     }
 
@@ -107,20 +136,32 @@ public class RedisRowDataInputFormat implements InputFormat<RowData, InputSplit>
 
     @Override
     public RowData nextRecord(RowData reuse) throws IOException {
-        GenericRowData genericRowData = null;
-        switch (redisCommand.toUpperCase()) {
-            case "SCAN":
-                genericRowData = new GenericRowData(1);
-                genericRowData.setField(0, currentIter.next);
-            case "HSCAN":
-                Map.Entry<String, String> next = (Map.Entry<String, String>)currentIter.next;
-                genericRowData = new GenericRowData(2);
-                genericRowData.setField(0, next.getKey());
-                genericRowData.setField(1, next.getValue());
-            default:
-                log.error("Unsupport redis type: " + redisCommand);
+        if (currentIter.hasNext()) {
+            GenericRowData genericRowData = null;
+            switch (redisCommand.toUpperCase()) {
+                case "SCAN":
+                    genericRowData = new GenericRowData(1);
+                    genericRowData.setField(0, currentIter.next());
+                    break;
+
+                case "HSCAN":
+
+                    Map.Entry<String, String> next = (Map.Entry<String, String>)currentIter.next();
+                    genericRowData = new GenericRowData(2);
+                    genericRowData.setField(0, toStringData(next.getKey()));
+                    genericRowData.setField(1, toStringData(next.getValue()));
+                    break;
+
+                default:
+                    log.error("Unsupport redis type: " + redisCommand);
+            }
+            return genericRowData;
         }
-        return genericRowData;
+        return null;
+    }
+
+    private static StringData toStringData(String value) {
+        return StringData.fromString(value);
     }
 
     @Override
@@ -130,25 +171,25 @@ public class RedisRowDataInputFormat implements InputFormat<RowData, InputSplit>
         }
     }
 
+    @Override
+    public TypeInformation<RowData> getProducedType() {
+        System.out.println("getProducedType");
+        return null;
+    }
+
 
     public static class Builder {
-        private int count = 100;
-        private String matchKey;
-        private String additionalKey;
-        private String redisCommand;
-        private ReadableConfig options;
+        private RedisOptions redisOptions;
+        private RedisReadOptions readOptions;
 
-        public Builder setOptions(ReadableConfig options) {
-            this.options = options;
-            this.additionalKey = options.get(ADDITIONAL_KEY);
-            this.redisCommand = options.get(COMMAND);
-            this.matchKey = options.get(MATCH_KEY);
-            this.count = options.get(SCAN_COUNT);
+        public Builder setOptions(RedisOptions redisOptions, RedisReadOptions readOptions) {
+            this.redisOptions = redisOptions;
+            this.readOptions = readOptions;
             return this;
         }
 
         public RedisRowDataInputFormat build() {
-            return new RedisRowDataInputFormat(count, matchKey, additionalKey, redisCommand, options);
+            return new RedisRowDataInputFormat(redisOptions, readOptions);
         }
     }
 

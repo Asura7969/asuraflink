@@ -1,5 +1,8 @@
 package com.asuraflink.sql.dynamic.redis;
 
+import com.asuraflink.sql.dynamic.redis.config.RedisLookupOptions;
+import com.asuraflink.sql.dynamic.redis.config.RedisOptions;
+import com.asuraflink.sql.dynamic.redis.config.RedisReadOptions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.apache.flink.configuration.ConfigOption;
@@ -40,11 +43,50 @@ public class RedisDynamicTableFactory implements DynamicTableSourceFactory, Dyna
         FactoryUtil.TableFactoryHelper helper = createTableFactoryHelper(this, context);
         helper.validate();
 
-        ReadableConfig options = helper.getOptions();
-        validateOptions(options);
-
+        ReadableConfig readableConfig = helper.getOptions();
+        validateOptions(readableConfig);
+        RedisOptions redisOptions = getRedisOptions(readableConfig);
+        RedisReadOptions redisReadOptions = getRedisReadOptions(readableConfig);
+        RedisLookupOptions redisLookupOptions = new RedisLookupOptions();
         TableSchema schema = context.getCatalogTable().getSchema();
-        return new RedisDynamicTableSource(options, schema);
+        return new RedisDynamicTableSource(redisOptions, redisLookupOptions, redisReadOptions, schema);
+    }
+
+    private static RedisReadOptions getRedisReadOptions(ReadableConfig readableConfig) {
+        RedisReadOptions.Builder builder = new RedisReadOptions.Builder();
+        builder.setScanCount(readableConfig.getOptional(SCAN_COUNT).orElse(SCAN_COUNT.defaultValue()));
+        builder.setMatchKey(readableConfig.getOptional(MATCH_KEY).orElse(MATCH_KEY.defaultValue()));
+        return builder.build();
+    }
+
+    private static RedisOptions getRedisOptions(ReadableConfig readableConfig) {
+        RedisOptions.Builder builder = new RedisOptions.Builder();
+
+        builder.setHost(readableConfig.getOptional(SINGLE_HOST)
+                .orElse(SINGLE_HOST.defaultValue()));
+        builder.setPort(readableConfig.getOptional(SINGLE_PORT)
+                .orElse(SINGLE_PORT.defaultValue()));
+        builder.setPassword(readableConfig.getOptional(PASSWORD)
+                .orElse(PASSWORD.defaultValue()));
+        builder.setDatabase(readableConfig.getOptional(DB_NUM)
+                .orElse(DB_NUM.defaultValue()));
+        builder.setCommand(readableConfig.getOptional(COMMAND)
+                .orElse(COMMAND.defaultValue()));
+        builder.setAdditionalKey(readableConfig.getOptional(ADDITIONAL_KEY)
+                .orElse(ADDITIONAL_KEY.defaultValue()));
+
+        builder.setConnectionMaxTotal(readableConfig.getOptional(CONNECTION_MAX_TOTAL)
+                .orElse(CONNECTION_MAX_TOTAL.defaultValue()));
+        builder.setConnectionTimeout(readableConfig.getOptional(CONNECTION_TIMEOUT_MS)
+                .orElse(CONNECTION_TIMEOUT_MS.defaultValue()));
+        builder.setConnectionMinIdle(readableConfig.getOptional(CONNECTION_MIN_IDLE)
+                .orElse(CONNECTION_MIN_IDLE.defaultValue()));
+        builder.setConnectionMaxIdle(readableConfig.getOptional(CONNECTION_MAX_IDLE)
+                .orElse(CONNECTION_MAX_IDLE.defaultValue()));
+        builder.setConnectionMaxTotal(readableConfig.getOptional(CONNECTION_MAX_TOTAL)
+                .orElse(CONNECTION_MAX_TOTAL.defaultValue()));
+
+        return builder.build();
     }
 
     @Override

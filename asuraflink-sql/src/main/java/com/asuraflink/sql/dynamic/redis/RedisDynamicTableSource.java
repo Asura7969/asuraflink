@@ -1,5 +1,8 @@
 package com.asuraflink.sql.dynamic.redis;
 
+import com.asuraflink.sql.dynamic.redis.config.RedisLookupOptions;
+import com.asuraflink.sql.dynamic.redis.config.RedisOptions;
+import com.asuraflink.sql.dynamic.redis.config.RedisReadOptions;
 import org.apache.flink.calcite.shaded.com.google.common.base.Preconditions;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.table.api.TableSchema;
@@ -10,11 +13,15 @@ import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.LogicalTypeRoot;
 
 public class RedisDynamicTableSource implements LookupTableSource, ScanTableSource {
-    private final ReadableConfig options;
+    private final RedisOptions redisOptions;
+    private final RedisReadOptions redisReadOptions;
+    private final RedisLookupOptions redisLookupOptions;
     private final TableSchema physicalSchema;
 
-    public RedisDynamicTableSource(ReadableConfig options, TableSchema physicalSchema) {
-        this.options = options;
+    public RedisDynamicTableSource(RedisOptions redisOptions, RedisLookupOptions redisLookupOptions, RedisReadOptions redisReadOptions, TableSchema physicalSchema) {
+        this.redisOptions = redisOptions;
+        this.redisLookupOptions = redisLookupOptions;
+        this.redisReadOptions = redisReadOptions;
         this.physicalSchema = physicalSchema;
     }
 
@@ -23,12 +30,12 @@ public class RedisDynamicTableSource implements LookupTableSource, ScanTableSour
         Preconditions.checkArgument(context.getKeys().length == 1 && context.getKeys()[0].length == 1,
                 "Redis source only supports lookup by single key");
         validate();
-        return TableFunctionProvider.of(new RedisRowDataLookupFunction(options));
+        return TableFunctionProvider.of(new RedisRowDataLookupFunction(redisOptions, redisLookupOptions));
     }
 
     @Override
     public DynamicTableSource copy() {
-        return new RedisDynamicTableSource(options, physicalSchema);
+        return new RedisDynamicTableSource(redisOptions, redisLookupOptions, redisReadOptions, physicalSchema);
     }
 
     @Override
@@ -44,7 +51,7 @@ public class RedisDynamicTableSource implements LookupTableSource, ScanTableSour
     @Override
     public ScanRuntimeProvider getScanRuntimeProvider(ScanContext runtimeProviderContext) {
         validate();
-        return InputFormatProvider.of(new RedisRowDataInputFormat.Builder().setOptions(options).build());
+        return InputFormatProvider.of(new RedisRowDataInputFormat.Builder().setOptions(redisOptions, redisReadOptions).build());
     }
 
     private void validate() {

@@ -1,9 +1,11 @@
 package com.asuraflink.sql.dynamic.redis.test;
 
 import com.alibaba.fastjson.JSONObject;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -31,11 +33,11 @@ public class RedisSourceTest {
 
         source();
 
-        EnvironmentSettings settings = EnvironmentSettings.newInstance()
-                .useBlinkPlanner()
-                .inStreamingMode()
-                .build();
-        TableEnvironment tEnv = TableEnvironment.create(settings);
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        EnvironmentSettings envSettings =
+                EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
+        StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, envSettings);
+
 
         String redisDDL =
                 "CREATE TABLE redis_test_city_info (\n" +
@@ -50,7 +52,7 @@ public class RedisSourceTest {
                 "  'command' = 'HGET',\n" +
                 "  'connection.timeout-ms' = '5000',\n" +
                 "  'connection.test-while-idle' = 'true',\n" +
-                "  'lookup.additional-key' = 'rtdw_dim:test_city_info'\n" +
+                "  'additional-key' = 'rtdw_dim:test_city_info'\n" +
 //                "  'lookup.cache.max-rows' = '1000',\n" +
 //                "  'lookup.cache.ttl-sec' = '600'\n" +
                 ")";

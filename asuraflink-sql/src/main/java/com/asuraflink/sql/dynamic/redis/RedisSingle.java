@@ -7,11 +7,12 @@ import redis.clients.jedis.ScanParams;
 import redis.clients.jedis.ScanResult;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Map;
 
 @Slf4j
 public class RedisSingle {
-    private final JedisPool jedisPool;
+    private JedisPool jedisPool;
 
     public RedisSingle(JedisPool jedisPool) {
         this.jedisPool = jedisPool;
