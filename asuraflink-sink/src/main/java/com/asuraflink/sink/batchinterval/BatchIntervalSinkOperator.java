@@ -1,6 +1,10 @@
 package com.asuraflink.sink.batchinterval;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.state.StateInitializationContext;
 import org.apache.flink.runtime.state.StateSnapshotContext;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
@@ -22,14 +26,16 @@ public abstract class BatchIntervalSinkOperator<T extends Serializable>
 
     private List<T> list;
     private ListState<T> listState;
+    private TypeInformation<T> typeInformation;
     private int batchSize;
     private long interval;
     private ProcessingTimeService processingTimeService;
 
-    BatchIntervalSinkOperator(int batchSize, long interval){
+    BatchIntervalSinkOperator(int batchSize, long interval, TypeInformation<T> typeInformation){
         this.chainingStrategy = ChainingStrategy.ALWAYS;
         this.batchSize = batchSize;
         this.interval = interval;
+        this.typeInformation = typeInformation;
     }
 
     @Override
@@ -46,7 +52,8 @@ public abstract class BatchIntervalSinkOperator<T extends Serializable>
     public void initializeState(StateInitializationContext context) throws Exception {
         super.initializeState(context);
         this.list = new ArrayList<T>();
-        listState = context.getOperatorStateStore().getSerializableListState("batch-interval-sink");
+        listState = context.getOperatorStateStore().getListState(new ListStateDescriptor<T>("batch-interval-sink", typeInformation));
+//        listState = context.getOperatorStateStore().getSerializableListState("batch-interval-sink");
         if(context.isRestored()){
             listState.get().forEach(x -> list.add(x));
         }
