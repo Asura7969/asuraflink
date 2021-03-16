@@ -29,7 +29,6 @@ public class IncrementalTrigger extends Trigger<Object, TimeWindow> /*implements
 
     }
 
-
     @Override
     public TriggerResult onElement(Object element, long timestamp, TimeWindow window, TriggerContext ctx) throws Exception {
 
