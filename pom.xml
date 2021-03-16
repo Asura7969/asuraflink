@@ -34,7 +34,8 @@ under the License.
         <module>asuraflink-checkpoint</module>
 		<module>asuraflink-produce</module>
 		<module>asuraflink-sql</module>
-	</modules>
+        <module>asuraflink-window</module>
+    </modules>
 	<packaging>pom</packaging>
 
 	<name>asuraflink</name>
