@@ -5,6 +5,7 @@ import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 
+import java.util.Comparator;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
@@ -19,13 +20,22 @@ public class IncrementalTrigger extends Trigger<Object, TimeWindow> {
 
     public IncrementalTrigger(Time intervalTime) {
         this.intervalTime = intervalTime.toMilliseconds();
-        this.registerWindowQueue = new PriorityQueue<>();
+        this.registerWindowQueue = new PriorityQueue<>(new Comparator<TimeWindow>() {
+            @Override
+            public int compare(TimeWindow o1, TimeWindow o2) {
+                return Integer.parseInt((o1.getStart() - o2.getStart()) + "");
+            }
+        });
 
     }
 
     // todo:是否始终要多注册一个窗口
     @Override
     public TriggerResult onElement(Object element, long timestamp, TimeWindow window, TriggerContext ctx) throws Exception {
+        if (window.maxTimestamp() <= ctx.getCurrentWatermark()) {
+            registerWindowQueue.remove(window);
+            return TriggerResult.FIRE;
+        }
         tryRegister(window, ctx);
         return TriggerResult.CONTINUE;
     }
@@ -37,6 +47,9 @@ public class IncrementalTrigger extends Trigger<Object, TimeWindow> {
 
     @Override
     public TriggerResult onEventTime(long time, TimeWindow window, TriggerContext ctx) throws Exception {
+        if (time == window.maxTimestamp()) {
+            registerWindowQueue.remove(window);
+        }
         return time == window.maxTimestamp() ? TriggerResult.FIRE_AND_PURGE : TriggerResult.FIRE;
     }
 
