@@ -50,6 +50,14 @@ public class RedisDynamicTableSource implements LookupTableSource, ScanTableSour
     @Override
     public ScanRuntimeProvider getScanRuntimeProvider(ScanContext runtimeProviderContext) {
         validate();
+
+        /**
+         * 此处的 ScanRuntimeProvider 有多种实现方式，具体可以参考：org.apache.flink.table.planner.plan.nodes.exec.common.CommonExecTableSourceScan
+         * 1、SourceFunctionProvider
+         * 2、InputFormatProvider
+         * 3、InputFormatProvider
+         * 4、SourceProvider
+         */
         return InputFormatProvider.of(new RedisRowDataInputFormat.Builder().setOptions(redisOptions, redisReadOptions).build());
     }
 
