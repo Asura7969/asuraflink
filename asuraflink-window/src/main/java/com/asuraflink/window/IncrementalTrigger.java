@@ -1,46 +1,32 @@
 package com.asuraflink.window;
 
-import org.apache.flink.api.common.state.OperatorStateStore;
-import org.apache.flink.api.common.state.ValueState;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
-import org.apache.flink.api.common.typeutils.base.LongSerializer;
-import org.apache.flink.runtime.state.FunctionInitializationContext;
-import org.apache.flink.runtime.state.FunctionSnapshotContext;
-import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 
-public class IncrementalTrigger extends Trigger<Object, TimeWindow> /*implements CheckpointedFunction*/ {
+import java.util.PriorityQueue;
+import java.util.Queue;
+
+public class IncrementalTrigger extends Trigger<Object, TimeWindow> {
 
     // 多久触发一次
-    private Time intervalTime;
-
-    private final ValueStateDescriptor<Long> ntStateDecs =
-            new ValueStateDescriptor<>("nextTimeState", LongSerializer.INSTANCE);
-
-    private ValueState<Long> ntState;
+    private long intervalTime;
     private long nextTime = Long.MIN_VALUE;
+
+    private final Queue<TimeWindow> registerWindowQueue;
 
 
     public IncrementalTrigger(Time intervalTime) {
-        this.intervalTime = intervalTime;
+        this.intervalTime = intervalTime.toMilliseconds();
+        this.registerWindowQueue = new PriorityQueue<>();
 
     }
 
+    // todo:是否始终要多注册一个窗口
     @Override
     public TriggerResult onElement(Object element, long timestamp, TimeWindow window, TriggerContext ctx) throws Exception {
-
-        long nextTriggerTime = nextTimeForTime(window.getStart());
-        if (nextTime == Long.MIN_VALUE) {
-            ctx.registerEventTimeTimer(nextTriggerTime);
-            return TriggerResult.CONTINUE;
-        } else if (ctx.getCurrentWatermark() < nextTime) {
-            return TriggerResult.CONTINUE;
-        } else {
-            ctx.registerEventTimeTimer(nextTime + intervalTime.toMilliseconds());
-        }
+        tryRegister(window, ctx);
         return TriggerResult.CONTINUE;
     }
 
@@ -51,15 +37,7 @@ public class IncrementalTrigger extends Trigger<Object, TimeWindow> /*implements
 
     @Override
     public TriggerResult onEventTime(long time, TimeWindow window, TriggerContext ctx) throws Exception {
-        long firstTriggerTimeOfWindow = nextTimeForTime(window.getStart());
-        if (nextTime < firstTriggerTimeOfWindow) {
-            ctx.registerEventTimeTimer(firstTriggerTimeOfWindow);
-        }
         return time == window.maxTimestamp() ? TriggerResult.FIRE_AND_PURGE : TriggerResult.FIRE;
-    }
-
-    private long nextTimeForTime(long time) {
-        return time / 1000 * 1000 + intervalTime.toMilliseconds();
     }
 
     @Override
@@ -67,15 +45,30 @@ public class IncrementalTrigger extends Trigger<Object, TimeWindow> /*implements
 
     }
 
-//    @Override
-//    public void snapshotState(FunctionSnapshotContext context) throws Exception {
-//
-//    }
+    /**
+     * 注册给定窗口的所有时间
+     * @param window
+     * @param ctx
+     */
+    private void registerTime(TimeWindow window, TriggerContext ctx) {
+        registerWindowQueue.add(window);
+        long registerTimeOfWindow = window.getStart();
+        for (long i = registerTimeOfWindow; i <= window.getEnd(); i++) {
+            ctx.registerEventTimeTimer(window.getStart());
+            if (registerTimeOfWindow == window.maxTimestamp()) {
+                break;
+            }
+            registerTimeOfWindow = registerTimeOfWindow + intervalTime;
+        }
+    }
 
-//    @Override
-//    public void initializeState(FunctionInitializationContext context) throws Exception {
-//        OperatorStateStore operatorStateStore = context.getOperatorStateStore();
-//        operatorStateStore.get
-//        //new ValueStateDescriptor<>("nextTriggerTime-state", LongSerializer.INSTANCE)
-//    }
+    private void tryRegister(TimeWindow window, TriggerContext ctx) {
+        if (registerWindowQueue.isEmpty()) {
+            registerTime(window, ctx);
+        } else {
+            if (!registerWindowQueue.contains(window)) {
+                registerTime(window, ctx);
+            }
+        }
+    }
 }
