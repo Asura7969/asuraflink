@@ -54,21 +54,22 @@ public class IncrementalTrigger extends Trigger<Object, TimeWindow> {
         registerWindowQueue.add(window);
         long registerTimeOfWindow = window.getStart();
         for (long i = registerTimeOfWindow; i <= window.getEnd(); i++) {
-            ctx.registerEventTimeTimer(window.getStart());
+            ctx.registerEventTimeTimer(registerTimeOfWindow);
             if (registerTimeOfWindow == window.maxTimestamp()) {
                 break;
             }
-            registerTimeOfWindow = registerTimeOfWindow + intervalTime;
+            registerTimeOfWindow += intervalTime;
         }
     }
 
     private void tryRegister(TimeWindow window, TriggerContext ctx) {
-        if (registerWindowQueue.isEmpty()) {
+        if (registerWindowQueue.isEmpty() || !registerWindowQueue.contains(window)) {
             registerTime(window, ctx);
-        } else {
-            if (!registerWindowQueue.contains(window)) {
-                registerTime(window, ctx);
-            }
+        }
+        // tudo: 此方法不能覆盖 sessionWindow的场景
+        TimeWindow nextWindow = new TimeWindow(window.getEnd(), window.getEnd() * 2 - window.getStart());
+        if (!registerWindowQueue.contains(window)) {
+            registerTime(nextWindow, ctx);
         }
     }
 }
