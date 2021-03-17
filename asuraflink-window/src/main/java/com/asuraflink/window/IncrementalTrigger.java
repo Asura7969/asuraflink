@@ -45,6 +45,7 @@ public class IncrementalTrigger extends Trigger<Object, TimeWindow> {
 
     }
 
+
     /**
      * 注册给定窗口的所有时间
      * @param window
