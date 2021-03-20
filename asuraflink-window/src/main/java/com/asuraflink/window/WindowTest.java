@@ -1,19 +1,15 @@
 package com.asuraflink.window;
 
-import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.eventtime.*;
-import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
 import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
+import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
-import org.apache.flink.streaming.api.windowing.assigners.WindowAssigner;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
-import org.apache.flink.streaming.api.windowing.windows.Window;
 import org.apache.flink.util.Collector;
 
 import java.util.*;
@@ -27,19 +23,21 @@ public class WindowTest {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
-        env.getConfig().setAutoWatermarkInterval(500);
-
-        env.addSource(new SourceFunction<String>() {
+//        env.getConfig().setAutoWatermarkInterval(500);
+//        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+        env.addSource(new SourceFunction<Tuple2<String,Long>>() {
             private static final long serialVersionUID = -2379895866820106777L;
             private volatile boolean running = true;
             private long count = 0L;
             @Override
-            public void run(SourceContext<String> ctx) throws Exception {
+            public void run(SourceContext<Tuple2<String,Long>> ctx) throws Exception {
 
                 while (running && count < 100) {
                     synchronized (ctx.getCheckpointLock()) {
                         Thread.sleep(10000);
-                        ctx.collect(count + "");
+                        long currentTimeMillis = System.currentTimeMillis();
+                        ctx.collectWithTimestamp(Tuple2.of(count+ "", currentTimeMillis), currentTimeMillis);
+                        ctx.emitWatermark(new Watermark(currentTimeMillis));
                         count++;
                     }
                 }
@@ -49,41 +47,36 @@ public class WindowTest {
                 running = false;
             }
         })
-//                .assignTimestampsAndWatermarks((WatermarkStrategy<String>) context -> new WatermarkGenerator<String>() {
-//            @Override
-//            public void onEvent(String event, long eventTimestamp, WatermarkOutput output) {
-//                output.emitWatermark(new Watermark(System.currentTimeMillis()));
-//            }
-//
-//            @Override
-//            public void onPeriodicEmit(WatermarkOutput output) {
-//                output.emitWatermark(new Watermark(System.currentTimeMillis()));
-//            }
-//        })
+                .assignTimestampsAndWatermarks((WatermarkStrategy<Tuple2<String,Long>>) context -> new WatermarkGenerator<Tuple2<String,Long>>() {
+            @Override
+            public void onEvent(Tuple2<String,Long> event, long eventTimestamp, WatermarkOutput output) {
+                output.emitWatermark(new org.apache.flink.api.common.eventtime.Watermark(event.f1));
+            }
 
-                .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<String>(){
-                    @Override
-                    public long extractAscendingTimestamp(String userBehavior) {
-                        // 原始数据单位秒，将其转成毫秒
-                        return System.currentTimeMillis();
-                    }
-                })
-                .keyBy((KeySelector<String, Integer>) value -> Integer.parseInt(value) % 2 == 0 ? 1 : 2)
+            @Override
+            public void onPeriodicEmit(WatermarkOutput output) {
+//                output.emitWatermark(new Watermark(System.currentTimeMillis()));
+            }
+        })
+//                .keyBy((KeySelector<Tuple2<String, Long>, Integer>) value -> Integer.parseInt(value.f0) % 2 == 0 ? 1 : 2)
+                .keyBy((KeySelector<Tuple2<String, Long>, Integer>) value -> 1)
                 .window(TumblingEventTimeWindows.of(Time.minutes(1)))
-                .trigger(new IncrementalTrigger(Time.seconds(2)))
-                .process(new ProcessWindowFunction<String, String, Integer, TimeWindow>() {
+                .trigger(new IncrementalTrigger(Time.seconds(10)))
+                .process(new ProcessWindowFunction<Tuple2<String, Long>, String, Integer, TimeWindow>() {
                     private static final long serialVersionUID = 6239834468102289206L;
 
                     @Override
                     public void process(Integer key, Context context,
-                                        Iterable<String> elements, Collector<String> out) throws Exception {
+                                        Iterable<Tuple2<String, Long>> elements, Collector<String> out) throws Exception {
+                        long start = context.window().getStart();
+                        long end = context.window().getEnd();
 
                         List<String> list = new ArrayList<>();
-                        Iterator<String> iterator = elements.iterator();
+                        Iterator<Tuple2<String, Long>> iterator = elements.iterator();
                         while (iterator.hasNext()) {
-                            list.add(iterator.next());
+                            list.add(iterator.next().f0);
                         }
-                        out.collect("key:" + key + " elements : " + list);
+                        out.collect("窗口:" + DateUtils.getStringTime(start) + " ~ " + DateUtils.getStringTime(end) + "\nkey:" + key + " elements : " + list);
                     }
                 }).print();
 
