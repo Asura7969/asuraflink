@@ -53,7 +53,7 @@ public class RpcDemo {
 
         woker.start();
         WorkerGateway workerGateway = woker.getSelfGateway(WorkerGateway.class);
-        assert master.getAllRegisteredWorker().size() == 1;
+        assertFunc(master.getAllRegisteredWorker().size() == 0, "");
 
 
         // master 连接 worker
@@ -66,12 +66,17 @@ public class RpcDemo {
         }).join();
 
         Map<String, String> allRegisteredWorker = master.getAllRegisteredWorker();
-        assert allRegisteredWorker.size() == 1;
-        assert allRegisteredWorker.containsValue(workerGateway.getUuid());
-
+        assertFunc(allRegisteredWorker.size() == 1, "worker没有注册成功");
+        assertFunc(master.getAllRegisteredWorker().containsKey(workerGateway.getUuid()), "不包含uuid");
 
 
         close();
+    }
+
+    public static void assertFunc(boolean flag, String msg) {
+        if(!flag) {
+            throw new RuntimeException(msg);
+        }
     }
 
 
