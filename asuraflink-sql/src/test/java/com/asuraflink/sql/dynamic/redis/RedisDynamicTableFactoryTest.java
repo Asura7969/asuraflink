@@ -57,10 +57,6 @@ public class RedisDynamicTableFactoryTest {
                 .setScanCount(2)
                 .setMatchKey("*")
                 .build();
-
-
-
-
     }
 
     @Test
@@ -106,7 +102,7 @@ public class RedisDynamicTableFactoryTest {
     }
 
 
-    private void useDynamicTableFactory(StreamExecutionEnvironment env, StreamTableEnvironment tEnv) {
+    private void useRedisDynamicTableFactory(StreamExecutionEnvironment env, StreamTableEnvironment tEnv) {
         Table t =
                 tEnv.fromDataStream(
                         env.fromCollection(
@@ -131,7 +127,7 @@ public class RedisDynamicTableFactoryTest {
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, envSettings);
 
         // create T table
-        useDynamicTableFactory(env, tEnv);
+        useRedisDynamicTableFactory(env, tEnv);
         tEnv.executeSql(
                 "CREATE TABLE " + INPUT_TABLE + " (\n" +
                         "  cityId STRING,\n" +

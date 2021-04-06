@@ -9,12 +9,14 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.StringData;
 import org.apache.flink.table.functions.FunctionContext;
 import org.apache.flink.table.functions.TableFunction;
+import org.apache.flink.table.runtime.operators.join.lookup.DelayAttributes;
+import org.apache.flink.table.runtime.operators.join.lookup.DelayStrategy;
 
 /**
  * https://cloud.tencent.com/developer/article/1560553
  */
 @Slf4j
-public class RedisRowDataLookupFunction extends TableFunction<RowData> {
+public class RedisRowDataLookupFunction extends TableFunction<RowData> implements DelayAttributes {
     private static final long serialVersionUID = 1L;
 
     private final RedisOptions redisOptions;
@@ -54,10 +56,14 @@ public class RedisRowDataLookupFunction extends TableFunction<RowData> {
 
         StringData key = lookupKey.getString(0);
         String value = command.equals("GET") ? redisSingle.get(key.toString()) : redisSingle.hget(additionalKey, key.toString());
-        RowData result = GenericRowData.of(key, StringData.fromString(value));
+        StringData rightOutput = StringData.fromString(value);
+        if (!collectIsNull(rightOutput)) {
+            RowData result = GenericRowData.of(key, rightOutput);
 
 //        cache.put(lookupKey, result);
-        collect(result);
+            collect(result);
+        }
+
 
     }
 }
