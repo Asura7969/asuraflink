@@ -1,6 +1,7 @@
 package org.apache.flink.table.runtime.operators.join.lookup;
 
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.util.Collector;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -13,11 +14,13 @@ public class RetryJoinElement {
     private AtomicInteger retryCount;
     private RowData leftKey;
     private long triggerTimestamp;
+    private Collector<RowData> out;
 
-    public RetryJoinElement(AtomicInteger retryCount, RowData leftKey, long triggerTimestamp) {
+    public RetryJoinElement(AtomicInteger retryCount, RowData leftKey, long triggerTimestamp, Collector<RowData> out) {
         this.retryCount = retryCount;
         this.leftKey = leftKey;
         this.triggerTimestamp = triggerTimestamp;
+        this.out = out;
     }
 
     public AtomicInteger getRetryCount() {
@@ -40,6 +43,10 @@ public class RetryJoinElement {
         return triggerTimestamp;
     }
 
+    public Collector<RowData> getOut() {
+        return out;
+    }
+
     public void setTriggerTimestamp(long triggerTimestamp) {
         this.triggerTimestamp = triggerTimestamp;
     }
@@ -48,7 +55,7 @@ public class RetryJoinElement {
         return this.retryCount.incrementAndGet() <= maxRetryCount;
     }
 
-    public static RetryJoinElement of(RowData leftKey, long triggerTimestamp) {
-        return new RetryJoinElement(new AtomicInteger(0), leftKey, triggerTimestamp);
+    public static RetryJoinElement of(RowData leftKey, long triggerTimestamp, Collector<RowData> out) {
+        return new RetryJoinElement(new AtomicInteger(0), leftKey, triggerTimestamp, out);
     }
 }

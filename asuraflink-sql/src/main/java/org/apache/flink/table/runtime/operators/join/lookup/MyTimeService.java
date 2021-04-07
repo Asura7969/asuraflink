@@ -102,7 +102,7 @@ public class MyTimeService implements TimerService {
 
     public void registerProcessingTimeTimer(long time) {
         Long oldTime = queue.peek();
-        if (queue.add(time)) {
+        if (!queue.contains(time) && queue.add(time)) {
             long nextTriggerTime = oldTime != null ? oldTime : Long.MAX_VALUE;
             if (time < nextTriggerTime) {
                 if (nextTimer != null) {
@@ -122,7 +122,6 @@ public class MyTimeService implements TimerService {
 
         while ((timer = queue.peek()) != null && timer <= time) {
             queue.poll();
-//            keyContext.setCurrentKey(timer.getKey());
             triggerTarget.onProcessingTime(timer);
         }
 

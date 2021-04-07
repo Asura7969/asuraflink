@@ -16,6 +16,8 @@ import org.apache.flink.table.runtime.collector.TableFunctionCollector;
 import org.apache.flink.table.runtime.generated.GeneratedCollector;
 import org.apache.flink.table.runtime.generated.GeneratedFunction;
 import org.apache.flink.util.Collector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ThreadFactory;
@@ -28,6 +30,8 @@ import java.util.concurrent.ThreadFactory;
  */
 public class LookupJoinRunner extends ProcessFunction<RowData, RowData> implements CheckpointedFunction, MyTriggerable {
     private static final long serialVersionUID = 1642851357194351122L;
+
+    private static final Logger logger = LoggerFactory.getLogger(LookupJoinRunner.class);
 
     public static final ThreadGroup TRIGGER_THREAD_GROUP = new ThreadGroup("LookupJoin-Triggers");
 
@@ -60,6 +64,7 @@ public class LookupJoinRunner extends ProcessFunction<RowData, RowData> implemen
         this.tableFieldsCount = tableFieldsCount;
         // 判断是否需要延迟 join
         if (generatedFetcher.getReferences()[0] instanceof DelayAttributes) {
+            logger.info("开启延迟join");
             this.delayMark = true;
             DelayStrategy delayStrategy = ((DelayAttributes)generatedFetcher.getReferences()[0]).getDelayStrategy();
             this.retryCount = delayStrategy.getRetryCount();
@@ -103,7 +108,7 @@ public class LookupJoinRunner extends ProcessFunction<RowData, RowData> implemen
                 // 没有 join到数据,放入state,延迟 join
                 long nextJoinTime = timeService.getCurrentProcessingTime() + delayMilliseconds;
                 timeService.registerProcessingTimeTimer(nextJoinTime);
-                memList.add(RetryJoinElement.of(in, nextJoinTime));
+                memList.add(RetryJoinElement.of(in, nextJoinTime, out));
             }
         } else {
             if (isLeftOuterJoin && !collector.isCollected()) {
@@ -119,7 +124,7 @@ public class LookupJoinRunner extends ProcessFunction<RowData, RowData> implemen
         List<RetryJoinElement> newList = new ArrayList<>();
         memList.forEach(next -> {
             if (next.getTriggerTimestamp() <= timestamp) {
-                System.out.println(timestamp - next.getTriggerTimestamp() + "ms : " + next.getLeftKey().getString(0));
+                logger.debug("{}ms : {}", timestamp - next.getTriggerTimestamp(), next.getLeftKey().getString(0));
                 try {
                     fetcher.flatMap(next.getLeftKey(), getFetcherCollector());
                 } catch (Exception e) {
@@ -131,13 +136,13 @@ public class LookupJoinRunner extends ProcessFunction<RowData, RowData> implemen
                         next.setTriggerTimestamp(nextJoinTime);
                         newList.add(next);
                         timeService.registerProcessingTimeTimer(nextJoinTime);
-                        System.out.println("重新注册:" + next.getLeftKey().getString(0));
+                        logger.debug("重新注册: {}", next.getLeftKey().getString(0));
                     } else if (isLeftOuterJoin){
                         outRow.replace(next.getLeftKey(), nullRow);
                         outRow.setRowKind(next.getLeftKey().getRowKind());
-                        getFetcherCollector().collect(outRow);
+                        next.getOut().collect(outRow);
                     } else {
-                        System.out.println("丢弃数据，没有 join 到:" + next.getLeftKey());
+                        logger.debug("丢弃数据，没有 join 到:{}", next.getLeftKey());
                     }
                 }
             } else {
@@ -161,6 +166,9 @@ public class LookupJoinRunner extends ProcessFunction<RowData, RowData> implemen
         if (collector != null) {
             FunctionUtils.closeFunction(collector);
         }
+        if (timeService != null) {
+            timeService.shutdownService();
+        }
     }
 
     @Override
@@ -176,14 +184,18 @@ public class LookupJoinRunner extends ProcessFunction<RowData, RowData> implemen
     @Override
     public void initializeState(FunctionInitializationContext context) throws Exception {
         if (delayMark) {
-            System.out.println("启用延迟功能");
             ListStateDescriptor<RetryJoinElement> retryJoinListStateDesc =
                     new ListStateDescriptor<>("retryJoinListState", RetryJoinElement.class);
             state = context.getOperatorStateStore().getListState(retryJoinListStateDesc);
             memList = new ArrayList<>();
             if (context.isRestored()) {
                 for (RetryJoinElement retryJoinElement : state.get()) {
+                    // 由于时间语义是processTIme, 因此应用恢复时,之前存在 statebankend 中的数据的触发时间必然小于现在的processTIme,
+                    // 所以这里会按当前时间重新设置下次的触发时间
+                    long nextTriggerTime = retryJoinElement.getTriggerTimestamp() + delayMilliseconds;
+                    retryJoinElement.setTriggerTimestamp(nextTriggerTime);
                     memList.add(retryJoinElement);
+                    timeService.registerProcessingTimeTimer(nextTriggerTime);
                 }
             }
         }

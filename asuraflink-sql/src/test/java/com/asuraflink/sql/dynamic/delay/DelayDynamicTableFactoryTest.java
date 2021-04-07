@@ -34,6 +34,10 @@ public class DelayDynamicTableFactoryTest {
     public static final String HGET = "HGET";
     public static final String HSCAN = "HSCAN";
 
+    /**
+     * 该示例通过自定义source, 持续输出, 看日志输出内容, 后续会完善该示例
+     * @throws Exception
+     */
     @Test
     public void testDelayLookUpJoin () throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -93,21 +97,6 @@ public class DelayDynamicTableFactoryTest {
                 $("id1"),
                 $("id2"),
                 $("proctime").proctime());
-//        Table t =
-//                tEnv.fromDataStream(
-//                        env.fromCollection(
-//                                Arrays.asList(
-//                                        new Tuple2<>("0-0", "0"),
-//                                        new Tuple2<>("1-1", "1"),
-//                                        new Tuple2<>("2-2", "2"),
-//                                        new Tuple2<>("3-3", "3"),
-//                                        new Tuple2<>("4-4", "4"),
-//                                        new Tuple2<>("5-5", "5"),
-//                                        new Tuple2<>("6-6", "6"),
-//                                        new Tuple2<>("7-7", "7"))),
-//                        $("id1"),
-//                        $("id2"),
-//                        $("proctime").proctime());
 
         tEnv.createTemporaryView("T", t);
     }
