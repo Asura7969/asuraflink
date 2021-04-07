@@ -57,10 +57,8 @@ public class RedisRowDataLookupFunction extends TableFunction<RowData> implement
         StringData key = lookupKey.getString(0);
         String value = command.equals("GET") ? redisSingle.get(key.toString()) : redisSingle.hget(additionalKey, key.toString());
         StringData rightOutput = StringData.fromString(value);
-        if (!collectIsNull(rightOutput)) {
+        if (collectIsNotNull(rightOutput)) {
             RowData result = GenericRowData.of(key, rightOutput);
-
-//        cache.put(lookupKey, result);
             collect(result);
         }
 
