@@ -136,13 +136,13 @@ public class LookupJoinRunner extends ProcessFunction<RowData, RowData> implemen
                         next.setTriggerTimestamp(nextJoinTime);
                         newList.add(next);
                         timeService.registerProcessingTimeTimer(nextJoinTime);
-                        logger.debug("重新注册: {}", next.getLeftKey().getString(0));
+                        logger.info("重新注册: {}", next.getLeftKey().getString(0));
                     } else if (isLeftOuterJoin){
                         outRow.replace(next.getLeftKey(), nullRow);
                         outRow.setRowKind(next.getLeftKey().getRowKind());
                         next.getOut().collect(outRow);
                     } else {
-                        logger.debug("丢弃数据，没有 join 到:{}", next.getLeftKey());
+                        logger.info("丢弃数据，没有 join 到:{}", next.getLeftKey());
                     }
                 }
             } else {

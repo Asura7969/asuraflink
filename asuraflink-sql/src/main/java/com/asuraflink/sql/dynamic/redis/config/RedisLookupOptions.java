@@ -1,7 +1,4 @@
 package com.asuraflink.sql.dynamic.redis.config;
-
-import com.asuraflink.sql.user.delay.utils.RetryerElement;
-
 import java.io.Serializable;
 import java.time.Duration;
 import java.util.concurrent.*;
