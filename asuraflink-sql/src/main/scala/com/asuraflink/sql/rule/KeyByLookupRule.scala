@@ -27,13 +27,14 @@ class KeyByLookupRule extends RelOptRule(
 
     val newInput = satisfyDistribution(
       FlinkConventions.STREAM_PHYSICAL, execLookupJoin.getInput, FlinkRelDistribution.hash(keys, requireStrict = true))
-
+      // 由于会报错, 所以注释掉以下代码
 //    val a = new StreamExecLookupJoin(
 //      cluster,
 //      execLookupJoin.getTraitSet,
 //      newInput,
 //      // TODO: 需要 temporalTable
 //      execLookupJoin.getTemporalTable,
+//      // TODO: 需要 calcOnTemporalTable
 //      execLookupJoin.getCalcOnTemporalTable,
 //      joinInfo, joinType)
 //
