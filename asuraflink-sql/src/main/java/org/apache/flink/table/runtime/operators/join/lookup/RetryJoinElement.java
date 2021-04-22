@@ -58,4 +58,8 @@ public class RetryJoinElement {
     public static RetryJoinElement of(RowData leftKey, long triggerTimestamp, Collector<RowData> out) {
         return new RetryJoinElement(new AtomicInteger(0), leftKey, triggerTimestamp, out);
     }
+
+    public static RetryJoinElement of(RowData leftKey, long triggerTimestamp) {
+        return new RetryJoinElement(new AtomicInteger(0), leftKey, triggerTimestamp, null);
+    }
 }

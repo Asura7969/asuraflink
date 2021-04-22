@@ -19,7 +19,7 @@
 ![1-1.png](http://ww1.sinaimg.cn/large/b3b57085gy1gpr54gtooij20kp0az764.jpg)
 
 ## 在哪实现(where)?
-实现的地方很多,图1-1 中最引人注意的是 `TEMPORAL_JOIN_REWRITE`(至少我是这么想的...), 但后来实现过程中由于对 `calcite API` 不熟悉,实在无奈,只能另辟蹊径了。
+实现的地方很多,图1-1 中最引人注意的是 `TEMPORAL_JOIN_REWRITE`, 但后来实现过程中由于对 `calcite API` 不熟悉,实在无奈,只能另辟蹊径了。
 
 最后看到 `PHYSICAL_RWRITE`, 先大致看了下这个规则下**Rule**的实现过程, 主要就是对已生成的 **physical node** 进行重写。
 
