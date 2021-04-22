@@ -29,7 +29,7 @@ import java.util.Objects;
  * @create 2021-03-30-21:50
  */
 public class KeyByLookupJoinRunner extends ProcessFunction<RowData, RowData> {
-    private static final long serialVersionUID = 1642851357194351122L;
+    private static final long serialVersionUID = 1642851357194351121L;
 
     private static final Logger logger = LoggerFactory.getLogger(KeyByLookupJoinRunner.class);
 
