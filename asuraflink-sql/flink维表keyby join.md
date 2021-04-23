@@ -43,3 +43,6 @@
 * 本次实践基于flink1.12.0
 * 该实现不一定是最优的
 * 如有不足,还请大佬指出
+
+
+[Flink Plan Visualizer](https://flink.apache.org/visualizer/)
