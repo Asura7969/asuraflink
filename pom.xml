@@ -300,8 +300,8 @@ under the License.
 				<version>${jetbrains.annotations.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>JUnit</groupId>
-				<artifactId>JUnit</artifactId>
+				<groupId>junit</groupId>
+				<artifactId>junit</artifactId>
 				<version>${junit.version}</version>
 			</dependency>
 

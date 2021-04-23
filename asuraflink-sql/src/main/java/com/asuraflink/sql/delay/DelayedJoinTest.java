@@ -74,7 +74,7 @@ public class DelayedJoinTest {
 //        tEnv.execute("");
     }
 
-    private static class ContinueSource implements SourceFunction<Tuple2<String, String>> {
+    public static class ContinueSource implements SourceFunction<Tuple2<String, String>> {
         private volatile boolean isRunning = true;
         private int count = 0;
         @Override

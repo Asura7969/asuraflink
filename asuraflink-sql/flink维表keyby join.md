@@ -25,19 +25,19 @@
 
 ## 怎么实现(how)?
 接下来就是依葫芦画瓢了
-
-![flink-sql 添加KeyByLookupJoinRule.png](http://ww1.sinaimg.cn/large/b3b57085gy1gpr52j7xksj21010x27d7.jpg)
-
 [KeyByLookupRule 实现](https://github.com/Asura7969/asuraflink/blob/main/asuraflink-sql/src/main/scala/com/asuraflink/sql/rule/KeyByLookupRule.scala)
 
 由于实现过程需要 `temporalTable` 和 `calcOnTemporalTable`, 而 **CommonLookupJoin** 中并没有获取这两个对象的方法,因此只能自己手动添加了
 ![CommonLookupJoin add method.png](http://ww1.sinaimg.cn/large/b3b57085gy1gpr5a1fx8ej213j0n5grh.jpg)
 
 ## 如何校验?
-本次校验就仅对 **JdbcLookupTableITCase** 该测试类测试
+本次校验就仅对 **JdbcLookupTableITCase** 该测试类测试,查看其执行计划
 ![flink join keyby.png](http://ww1.sinaimg.cn/large/b3b57085gy1gprpv96eutj20u00m70vf.jpg)
 
+结合flink动态添加规则
+![]()
+
 # 注意事项
-* 本次实践基于flink1.12.0, 需要修改源码
+* 本次实践基于flink1.12.0
 * 该实现不一定是最优的
 * 如有不足,还请大佬指出

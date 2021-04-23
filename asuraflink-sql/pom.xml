@@ -96,8 +96,8 @@
         </dependency>
         <!-- test -->
         <dependency>
-            <groupId>JUnit</groupId>
-            <artifactId>JUnit</artifactId>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
         </dependency>
 
         <dependency>

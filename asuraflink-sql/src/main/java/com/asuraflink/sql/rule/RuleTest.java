@@ -1,7 +1,6 @@
 package com.asuraflink.sql.rule;
 
 import org.apache.calcite.plan.RelOptRule;
-import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
