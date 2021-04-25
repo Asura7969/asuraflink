@@ -36,6 +36,7 @@ under the License.
 		<module>asuraflink-sql</module>
         <module>asuraflink-window</module>
         <module>asuraflink-rpc</module>
+        <module>asuraflink-calcite</module>
     </modules>
 	<packaging>pom</packaging>
 
