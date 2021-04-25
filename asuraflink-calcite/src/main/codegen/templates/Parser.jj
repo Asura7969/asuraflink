@@ -82,6 +82,7 @@ import org.apache.calcite.sql.SqlMerge;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlNumericLiteral;
+import org.apache.calcite.sql.SqlExample;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlPostfixOperator;
@@ -1058,7 +1059,7 @@ SqlNode SqlStmtEof() :
 
 SqlNode SqlExample() :
 {
-     SqlNode stringNode;
+    SqlNode stringNode;
 }
 {
     <RUN> <EXAMPLE>

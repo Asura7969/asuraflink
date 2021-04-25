@@ -385,6 +385,19 @@ under the License.
 				<version>29.0-jre</version>
 			</dependency>
 
+			<dependency>
+				<groupId>net.java.dev.javacc</groupId>
+				<artifactId>javacc</artifactId>
+				<version>7.0.9</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.calcite</groupId>
+				<artifactId>calcite-core</artifactId>
+				<version>1.23.0</version>
+			</dependency>
+
+
 		</dependencies>
 	</dependencyManagement>
 

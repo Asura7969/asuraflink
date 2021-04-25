@@ -36,7 +36,7 @@ data: {
   parser: {
     # Generated parser implementation package and class name.
     package: "org.apache.calcite.sql.parser.impl",
-    class: "SqlExample",
+    class: "ExampleSqlParserImpl",
 
     # List of additional classes and packages to import.
     # Example. "org.apache.calcite.sql.*", "java.util.List".
