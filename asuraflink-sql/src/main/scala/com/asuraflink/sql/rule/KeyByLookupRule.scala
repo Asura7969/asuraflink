@@ -23,6 +23,8 @@ class KeyByLookupRule extends RelOptRule(
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val tableConfig = call.getPlanner.getContext.unwrap(classOf[FlinkContext]).getTableConfig
+    val execLookupJoin: StreamExecLookupJoin = call.rel(0)
+    execLookupJoin
     tableConfig.getConfiguration.getBoolean(AddRuleUtils.LOOKUP_KEY_BY_ENABLE, false)
   }
 

@@ -11,7 +11,7 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.co.BroadcastProcessFunction;
 import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer010;
+import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.util.Collector;
 
 import java.util.Properties;
@@ -25,8 +25,8 @@ public class BroadCastStream {
         kafkaProperties.put("bootstrap.servers","localhost:9092");
         kafkaProperties.put("group.id","broadcast-groupId");
 
-        FlinkKafkaConsumer010<String> kafkaConsumer =
-                new FlinkKafkaConsumer010<>("broadcast-topic", new SimpleStringSchema(), kafkaProperties);
+        FlinkKafkaConsumer<String> kafkaConsumer =
+                new FlinkKafkaConsumer<>("broadcast-topic", new SimpleStringSchema(), kafkaProperties);
         kafkaConsumer.setStartFromLatest();
 
         DataStream<String> kafkaSource = env.addSource(kafkaConsumer).name("KafkaSource").uid("source-id-kafka-source");
