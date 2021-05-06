@@ -62,7 +62,7 @@ public class KeyByBroadcastStream {
                 super.onTimer(timestamp, ctx, out);
             }
         }).print();
-//        System.out.println(env.getExecutionPlan());
+        System.out.println(env.getExecutionPlan());
         env.execute("KeyByBroadcastStream");
 
 

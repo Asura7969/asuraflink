@@ -28,9 +28,9 @@
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-clients_${scala.binary.version}</artifactId>
         </dependency>
-        <dependency>
-            <groupId>JUnit</groupId>
-            <artifactId>JUnit</artifactId>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>JUnit</groupId>-->
+<!--            <artifactId>JUnit</artifactId>-->
+<!--        </dependency>-->
     </dependencies>
 </project>

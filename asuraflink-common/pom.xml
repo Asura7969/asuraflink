@@ -72,9 +72,9 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>JUnit</groupId>
-            <artifactId>JUnit</artifactId>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>JUnit</groupId>-->
+<!--            <artifactId>JUnit</artifactId>-->
+<!--        </dependency>-->
     </dependencies>
 </project>
