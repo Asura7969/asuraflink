@@ -110,6 +110,7 @@ class StreamExecBroadcastTemporalJoin(
         "test-broadcast",
         leftTransform,
         rightTransform,
+        // todo
         null,
         Collections.singletonList(temporalBroadcastStateDescriptor),
         InternalTypeInfo.of(returnType),
