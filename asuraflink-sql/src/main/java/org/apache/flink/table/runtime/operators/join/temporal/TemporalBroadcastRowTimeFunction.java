@@ -21,7 +21,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class TemporalBroadcastRwoTimeFunction extends KeyedBroadcastProcessFunction<RowData, RowData, RowData, RowData> {
+public class TemporalBroadcastRowTimeFunction extends KeyedBroadcastProcessFunction<RowData, RowData, RowData, RowData> {
 //public class TemporalBroadcastRwoTimeFunction extends KeyedBroadcastProcessFunction<RowData, RowData, RowData, RowData> {
 
     private final GeneratedJoinCondition generatedJoinCondition;
@@ -42,7 +42,7 @@ public class TemporalBroadcastRwoTimeFunction extends KeyedBroadcastProcessFunct
     private final int rightTimeAttribute;
     private Map<Long, RowData> leftState;
 
-    public TemporalBroadcastRwoTimeFunction(
+    public TemporalBroadcastRowTimeFunction(
             GeneratedJoinCondition generatedJoinCondition,
             int leftTimeAttribute,
             int rightTimeAttribute,

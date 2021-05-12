@@ -100,7 +100,7 @@ import org.apache.flink.table.planner.plan.utils.TemporalJoinUtil.{TEMPORAL_JOIN
 import org.apache.flink.table.planner.plan.utils.{KeySelectorUtil, RelExplainUtil, TemporalJoinUtil}
 import org.apache.flink.table.runtime.generated.GeneratedJoinCondition
 import org.apache.flink.table.runtime.keyselector.RowDataKeySelector
-import org.apache.flink.table.runtime.operators.join.temporal.{TemporalBroadcastRwoTimeFunction, TemporalProcessTimeJoinOperator, TemporalRowTimeJoinOperator}
+import org.apache.flink.table.runtime.operators.join.temporal.{TemporalBroadcastRowTimeFunction, TemporalProcessTimeJoinOperator, TemporalRowTimeJoinOperator}
 import org.apache.flink.table.runtime.typeutils.InternalTypeInfo
 import org.apache.flink.table.types.logical.RowType
 import org.apache.flink.util.Preconditions.checkState
@@ -390,8 +390,8 @@ class StreamExecTemporalJoinToCoProcessTranslator private(
     val isLeftOuterJoin = joinType == JoinRelType.LEFT
     val minRetentionTime = tableConfig.getMinIdleStateRetentionTime
     val maxRetentionTime = tableConfig.getMaxIdleStateRetentionTime
-    // TemporalBroadcastRwoTimeFunction 的实现参考 TemporalRowTimeJoinOperator
-    new TemporalBroadcastRwoTimeFunction(
+    // TemporalBroadcastRowTimeFunction 的实现参考 TemporalRowTimeJoinOperator
+    new TemporalBroadcastRowTimeFunction(
       generatedJoinCondition,
       leftTimeAttributeInputReference,
       rightRowTimeAttributeInputReference.get,
@@ -583,8 +583,8 @@ object StreamExecTemporalJoinToCoProcessTranslator {
   }
 }
 ```
-### TemporalBroadcastRwoTimeFunction
-> TemporalBroadcastRwoTimeFunction 自行实现
+### TemporalBroadcastRowTimeFunction
+> TemporalBroadcastRowTimeFunction 自行实现
 
 
 ### TemporalJoinITCase
