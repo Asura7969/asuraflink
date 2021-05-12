@@ -1,31 +1,21 @@
 
+> 本文只提供实现思路
 
 ![flink broadcast维表.png](http://ww1.sinaimg.cn/large/b3b57085gy1gq9mpof6pxj20tw0dk0ua.jpg)
 
 
 Temporal table function join(LATERAL TemporalTableFunction(o.proctime)) 仅支持 Inner Join,仅支持单一列为主键(primary key)
+
 Temporal table join(FOR SYSTEM_TIME AS OF) 仅支持 Inner Join 和 Left Join, 支持任意列为主键(primary key)
 
 
-
+## StreamExecExchange
+`StreamExecExchange`现仅支持 **SINGLETON** 和 **HASH** 两种方式的分区,且broadcast方式需要上下游2个input，在`StreamExecExchange`中实现不太方便
+因此直接考虑在`StreamExecTemporalJoin`中实现
+![StreamExecExchange.png](http://ww1.sinaimg.cn/large/b3b57085gy1gqfg3ggq52j20kw0k6n0e.jpg)
 
 ## StreamExecTemporalJoinRule
 ```scala
-package org.apache.flink.table.planner.plan.rules.physical.stream
-
-import java.util
-
-import org.apache.flink.table.planner.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.planner.plan.nodes.FlinkConventions
-import org.apache.flink.table.planner.plan.nodes.logical._
-import org.apache.flink.table.planner.plan.nodes.physical.stream.StreamExecTemporalJoin
-import org.apache.flink.table.planner.plan.utils.{FlinkRelOptUtil, IntervalJoinUtil, TemporalJoinUtil}
-import org.apache.calcite.plan.RelOptRule.{any, operand}
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.core.JoinRelType
-import org.apache.flink.util.Preconditions.checkState
-
 /**
  * Rule that matches a temporal join node and converts it to [[StreamExecTemporalJoin]],
  * the temporal join node is a [[FlinkLogicalJoin]] which contains [[TemporalJoinCondition]].
@@ -36,35 +26,7 @@ class StreamExecTemporalJoinRule
       operand(classOf[FlinkLogicalRel], any()),
       operand(classOf[FlinkLogicalRel], any())),
     "StreamExecTemporalJoinRule") {
-
-  override def matches(call: RelOptRuleCall): Boolean = {
-    val join = call.rel[FlinkLogicalJoin](0)
-    if (!TemporalJoinUtil.containsTemporalJoinCondition(join.getCondition)) {
-      return false
-    }
-
-    //INITIAL_TEMPORAL_JOIN_CONDITION should not appear in physical phase.
-    checkState(!TemporalJoinUtil.containsInitialTemporalJoinCondition(join.getCondition))
-
-    matchesTemporalTableJoin(join) || matchesTemporalTableFunctionJoin(join)
-  }
-
-  private def matchesTemporalTableJoin(join: FlinkLogicalJoin): Boolean = {
-    val supportedJoinTypes = Seq(JoinRelType.INNER, JoinRelType.LEFT)
-    supportedJoinTypes.contains(join.getJoinType)
-  }
-
-  private def matchesTemporalTableFunctionJoin(join: FlinkLogicalJoin): Boolean = {
-    val joinInfo = join.analyzeCondition
-    val tableConfig = FlinkRelOptUtil.getTableConfigFromContext(join)
-    val (windowBounds, _) = IntervalJoinUtil.extractWindowBoundsFromPredicate(
-      joinInfo.getRemaining(join.getCluster.getRexBuilder),
-      join.getLeft.getRowType.getFieldCount,
-      join.getRowType,
-      join.getCluster.getRexBuilder,
-      tableConfig)
-    windowBounds.isEmpty && join.getJoinType == JoinRelType.INNER
-  }
+  ...
 
   override def onMatch(call: RelOptRuleCall): Unit = {
     val join = call.rel[FlinkLogicalJoin](0)
@@ -83,14 +45,15 @@ class StreamExecTemporalJoinRule
       val distribution = if (columns.size() == 0) {
         FlinkRelDistribution.SINGLETON
       }
-      else {
-        FlinkRelDistribution.hash(columns)
-      }
-//      else if (isLeft) {
+//      else {
 //        FlinkRelDistribution.hash(columns)
-//      } else {
-//        FlinkRelDistribution.BROADCAST_DISTRIBUTED
 //      }
+      else if (isLeft) {
+        FlinkRelDistribution.hash(columns)
+      } else {
+        // 添加 BROADCAST_DISTRIBUTED（可以添加config配置信息等条判断是否添加该分区方式）
+        FlinkRelDistribution.BROADCAST_DISTRIBUTED
+      }
       inputTraitSets.
         replace(FlinkConventions.STREAM_PHYSICAL).
         replace(distribution)
@@ -116,10 +79,6 @@ class StreamExecTemporalJoinRule
     call.transformTo(temporalJoin)
   }
 }
-
-object StreamExecTemporalJoinRule {
-  val INSTANCE: RelOptRule = new StreamExecTemporalJoinRule
-}
 ```
 
 ### StreamExecTemporalJoin
@@ -129,7 +88,7 @@ package org.apache.flink.table.planner.plan.nodes.physical.stream
 import org.apache.flink.api.dag.Transformation
 import org.apache.flink.api.java.typeutils.{ListTypeInfo, ResultTypeQueryable}
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator
-import org.apache.flink.streaming.api.transformations.{BroadcastStateTransformation, TwoInputTransformation}
+import org.apache.flink.streaming.api.transformations.{BroadcastStateTransformation, KeyedBroadcastStateTransformation, PartitionTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.{TableConfig, TableException, ValidationException}
 import org.apache.flink.table.data.RowData
 import org.apache.flink.table.planner.calcite.FlinkTypeFactory
@@ -141,7 +100,7 @@ import org.apache.flink.table.planner.plan.utils.TemporalJoinUtil.{TEMPORAL_JOIN
 import org.apache.flink.table.planner.plan.utils.{KeySelectorUtil, RelExplainUtil, TemporalJoinUtil}
 import org.apache.flink.table.runtime.generated.GeneratedJoinCondition
 import org.apache.flink.table.runtime.keyselector.RowDataKeySelector
-import org.apache.flink.table.runtime.operators.join.temporal.{TemporalBroadcastProcessFunction, TemporalProcessTimeJoinOperator, TemporalRowTimeJoinOperator}
+import org.apache.flink.table.runtime.operators.join.temporal.{TemporalBroadcastRwoTimeFunction, TemporalProcessTimeJoinOperator, TemporalRowTimeJoinOperator}
 import org.apache.flink.table.runtime.typeutils.InternalTypeInfo
 import org.apache.flink.table.types.logical.RowType
 import org.apache.flink.util.Preconditions.checkState
@@ -155,7 +114,8 @@ import java.util.Collections
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.flink.api.common.state.MapStateDescriptor
 import org.apache.flink.api.common.typeinfo.Types
-import org.apache.flink.streaming.api.functions.co.BroadcastProcessFunction
+import org.apache.flink.streaming.api.functions.co.{BroadcastProcessFunction, KeyedBroadcastProcessFunction}
+import org.apache.flink.streaming.runtime.partitioner.BroadcastPartitioner
 import org.apache.flink.table.planner.plan.`trait`.FlinkRelDistribution
 
 import scala.collection.JavaConversions._
@@ -227,22 +187,22 @@ class StreamExecTemporalJoin(
       getJoinInfo,
       cluster.getRexBuilder)
 
-
     val leftTransform = getInputNodes.get(0).translateToPlan(planner)
       .asInstanceOf[Transformation[RowData]]
-    //    val rightTransform = getInputNodes.get(1).translateToPlan(planner)
-    //      .asInstanceOf[Transformation[RowData]]
+//    val rightTransform = getInputNodes.get(1).translateToPlan(planner)
+//      .asInstanceOf[Transformation[RowData]]
 
-    val (rightTransform, broadcast) = getInputNodes.get(1) match {
+    val inNode = getInputNodes.get(1)
+    val (rightTransform, broadcast) = inNode match {
       case e:StreamExecExchange =>
         if (e.getTraitSet.contains(FlinkRelDistribution.BROADCAST_DISTRIBUTED)) {
-          (e.getInputNodes.get(0).translateToPlan(planner)
+          (inNode.getInputNodes.get(0).translateToPlan(planner)
             .asInstanceOf[Transformation[RowData]], true)
         } else {
-          noBroadcast(e, planner)
+          noBroadcast(inNode, planner)
         }
       case _ =>
-        noBroadcast(getInputNodes.get(1), planner)
+        noBroadcast(inNode, planner)
     }
 
     val joinOperator = joinTranslator.getJoinOperator(joinType, returnType.getFieldNames)
@@ -277,18 +237,17 @@ class StreamExecTemporalJoin(
         new MapStateDescriptor[java.lang.Long, util.List[RowData]](
           "temporalBroadcastState", Types.LONG, rowListTypeInfo)
 
-      new BroadcastStateTransformation[RowData, RowData, RowData](
+      new KeyedBroadcastStateTransformation[RowData, RowData, RowData, RowData](
         "test-broadcast",
         leftTransform,
         new PartitionTransformation(rightTransform, new BroadcastPartitioner[RowData]),
         joinTranslator.getBroadcastFunction(joinType, temporalBroadcastStateDescriptor),
         Collections.singletonList(temporalBroadcastStateDescriptor),
+        leftKeySelector.asInstanceOf[ResultTypeQueryable[RowData]].getProducedType,
+        leftKeySelector,
         InternalTypeInfo.of(returnType),
         leftTransform.getParallelism)
     }
-//    if (leftTransform.isInstanceOf[KeyedStream]) {
-//
-//    }
   }
 
   private def noBroadcast(inputNode: ExecNode[StreamPlanner, _],
@@ -379,11 +338,11 @@ class StreamExecTemporalJoinToCoProcessTranslator private(
 
     createJoinOperator(config, joinType, generatedJoinCondition)
   }
-
+  // 构造 BroadcastProcessFunction
   def getBroadcastFunction(
     joinType: JoinRelType,
     mapStateDescriptor: MapStateDescriptor[java.lang.Long, util.List[RowData]])
-  : BroadcastProcessFunction[RowData, RowData, RowData] = {
+  : KeyedBroadcastProcessFunction[RowData, RowData, RowData, RowData] = {
     val ctx = CodeGeneratorContext(config)
     val exprGenerator = new ExprCodeGenerator(ctx, nullableInput = false)
       .bindInput(leftInputType)
@@ -406,15 +365,14 @@ class StreamExecTemporalJoinToCoProcessTranslator private(
       body)
 
     createJoinBroadcastFunc(config, joinType, generatedJoinCondition, mapStateDescriptor)
-
   }
-
+  // 构造 BroadcastProcessFunction
   protected def createJoinBroadcastFunc(
     tableConfig: TableConfig,
     joinType: JoinRelType,
     generatedJoinCondition: GeneratedJoinCondition,
     mapStateDescriptor: MapStateDescriptor[java.lang.Long, util.List[RowData]])
-  : BroadcastProcessFunction[RowData, RowData, RowData] = {
+  : KeyedBroadcastProcessFunction[RowData, RowData, RowData, RowData] = {
     if (isTemporalFunctionJoin) {
       if (joinType != JoinRelType.INNER) {
         throw new ValidationException(
@@ -432,13 +390,15 @@ class StreamExecTemporalJoinToCoProcessTranslator private(
     val isLeftOuterJoin = joinType == JoinRelType.LEFT
     val minRetentionTime = tableConfig.getMinIdleStateRetentionTime
     val maxRetentionTime = tableConfig.getMaxIdleStateRetentionTime
-    new TemporalBroadcastProcessFunction(
+    // TemporalBroadcastRwoTimeFunction 的实现参考 TemporalRowTimeJoinOperator
+    new TemporalBroadcastRwoTimeFunction(
       generatedJoinCondition,
+      leftTimeAttributeInputReference,
+      rightRowTimeAttributeInputReference.get,
       InternalTypeInfo.of(rightInputType),
       mapStateDescriptor,
       isLeftOuterJoin
     )
-
   }
 
   protected def createJoinOperator(
@@ -623,120 +583,11 @@ object StreamExecTemporalJoinToCoProcessTranslator {
   }
 }
 ```
+### TemporalBroadcastRwoTimeFunction
+> TemporalBroadcastRwoTimeFunction 自行实现
 
 
-### add TemporalBroadcastProcessFunction (org.apache.flink.table.runtime.operators.join.temporal.BaseTwoInputStreamOperatorWithStateRetention)
-```java
-package org.apache.flink.table.runtime.operators.join.temporal;
-
-import org.apache.flink.api.common.state.BroadcastState;
-import org.apache.flink.api.common.state.MapStateDescriptor;
-import org.apache.flink.api.common.state.ReadOnlyBroadcastState;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.streaming.api.functions.co.BroadcastProcessFunction;
-import org.apache.flink.table.data.GenericRowData;
-import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.data.utils.JoinedRowData;
-import org.apache.flink.table.runtime.generated.GeneratedJoinCondition;
-import org.apache.flink.table.runtime.generated.JoinCondition;
-import org.apache.flink.table.runtime.typeutils.InternalTypeInfo;
-import org.apache.flink.util.Collector;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
-public class TemporalBroadcastProcessFunction extends BroadcastProcessFunction<RowData, RowData, RowData> {
-
-    private final GeneratedJoinCondition generatedJoinCondition;
-    private final InternalTypeInfo<RowData> rightType;
-    private final MapStateDescriptor<Long, List<RowData>> temporalBroadcastStateDescriptor;
-    private final boolean isLeftOuterJoin;
-
-    private transient JoinCondition joinCondition;
-    private transient JoinedRowData outRow;
-    private transient GenericRowData rightNullRow;
-
-    public TemporalBroadcastProcessFunction(
-            GeneratedJoinCondition generatedJoinCondition,
-            InternalTypeInfo<RowData> rightType,
-            MapStateDescriptor<Long, List<RowData>> temporalBroadcastStateDescriptor,
-            boolean isLeftOuterJoin) {
-        this.generatedJoinCondition = generatedJoinCondition;
-        this.rightType = rightType;
-        this.temporalBroadcastStateDescriptor = temporalBroadcastStateDescriptor;
-        this.isLeftOuterJoin = isLeftOuterJoin;
-    }
-
-    @Override
-    public void open(Configuration parameters) throws Exception {
-        this.joinCondition =
-                generatedJoinCondition.newInstance(getRuntimeContext().getUserCodeClassLoader());
-        this.outRow = new JoinedRowData();
-        this.rightNullRow = new GenericRowData(rightType.toRowSize());
-    }
-
-    @Override
-    public void processElement(
-            RowData leftSideRow,
-            ReadOnlyContext ctx,
-            Collector<RowData> out) throws Exception {
-
-        ReadOnlyBroadcastState<Long, List<RowData>> broadcastState = ctx.getBroadcastState(
-                temporalBroadcastStateDescriptor);
-        long currentProcessingTime = ctx.currentProcessingTime();
-        List<RowData> temporalRows = broadcastState.get(currentProcessingTime);
-        boolean joinSuccess = false;
-        if (Objects.nonNull(temporalRows)) {
-            for (RowData rightSideRow : temporalRows) {
-                if (joinCondition.apply(leftSideRow, rightSideRow)) {
-                    joinSuccess = true;
-                    collectJoinedRow(leftSideRow, rightSideRow, out);
-                }
-            }
-            if (!joinSuccess && isLeftOuterJoin) {
-                collectJoinedRow(leftSideRow, rightNullRow, out);
-            }
-        } else {
-            if (isLeftOuterJoin) {
-                collectJoinedRow(leftSideRow, rightNullRow, out);
-            }
-        }
-
-    }
-
-    @Override
-    public void processBroadcastElement(
-            RowData value,
-            Context ctx,
-            Collector<RowData> out) throws Exception {
-        long currentProcessingTime = ctx.currentProcessingTime();
-        BroadcastState<Long, List<RowData>> broadcastState = ctx.getBroadcastState(
-                temporalBroadcastStateDescriptor);
-        List<RowData> rowDataList = broadcastState.get(currentProcessingTime);
-        if (Objects.isNull(rowDataList)) {
-            rowDataList = new ArrayList<>();
-        }
-        rowDataList.add(value);
-        broadcastState.put(currentProcessingTime, rowDataList);
-    }
-
-    @Override
-    public void close() throws Exception {
-        super.close();
-    }
-
-    private void collectJoinedRow(RowData leftRow, RowData rightRow, Collector<RowData> collector) {
-        outRow.setRowKind(leftRow.getRowKind());
-        outRow.replace(leftRow, rightRow);
-        collector.collect(outRow);
-    }
-
-}
-
-```
-
-
+### TemporalJoinITCase
 TemporalJoinITCase.testEventTimeTemporalJoin
 ```scala
 val sqlQuery = " SELECT o.order_id, o.currency, o.amount, o.order_time, r.rate, r.currency_time " +
