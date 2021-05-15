@@ -1,13 +1,13 @@
 package com.asuraflink.sql.dynamic.redis;
 
 import lombok.extern.slf4j.Slf4j;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.ScanParams;
-import redis.clients.jedis.ScanResult;
+import redis.clients.jedis.*;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -58,6 +58,45 @@ public class RedisSingle {
             return jedis.hget(key, hashField);
         } catch (Exception e) {
             log.error("Cannot receive Redis message with command HGET to key {} and hashField {} error message {}", key, hashField, e.getMessage());
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    public Map<String,String> pget(final List<String> keys) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            Pipeline p = jedis.pipelined();
+            Map<String,String> kv = new HashMap<>();
+            keys.forEach(key -> {
+                kv.put(key, p.get(key).get());
+            });
+            p.sync();
+            p.close();
+            return kv;
+        } catch (Exception e) {
+            log.error("Cannot receive Redis message with command HGET to key {} error message {}",
+                    keys, e.getMessage());
+            throw e;
+        } finally {
+            releaseInstance(jedis);
+        }
+    }
+
+    public Map<String,String> phget(final String key, final List<String> hashFields) {
+        Jedis jedis = null;
+        try {
+            jedis = getInstance();
+            Pipeline p = jedis.pipelined();
+            Map<String,String> kv = new HashMap<>();
+            hashFields.forEach(field -> kv.put(field, p.hget(key, field).get()));
+            p.sync();
+            p.close();
+            return kv;
+        } catch (Exception e) {
+            log.error("Cannot receive Redis message with command HGET to key {} and hashField {} error message {}", key, hashFields, e.getMessage());
             throw e;
         } finally {
             releaseInstance(jedis);

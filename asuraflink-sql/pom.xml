@@ -15,6 +15,11 @@
         <!-- Flink modules -->
         <dependency>
             <groupId>org.apache.flink</groupId>
+            <artifactId>flink-runtime-web_2.11</artifactId>
+            <version>${flink.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
             <artifactId>flink-table-api-java</artifactId>
             <version>${flink.version}</version>
         </dependency>
@@ -106,6 +111,12 @@
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.30</version>
 <!--            <scope>test</scope>-->
+        </dependency>
+        <dependency>
+            <groupId>JUnit</groupId>
+            <artifactId>JUnit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
         </dependency>
 
 
