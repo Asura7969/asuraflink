@@ -1,4 +1,4 @@
-# Mini-Batch 维表 Joinn
+# Mini-Batch 维表 Join
 
 ## 背景
 主要针对一些 I/O 请求比较高，系统又支持 batch 请求的能力，比如说 RPC、HBase、Redis 等。以往的方式都是逐条的请求，且 Async I/O 只能解决 I/O 延迟的问题,并不能解决访问量的问题。通过实现 Mini-Batch 版本的维表算子，大量降低维表关联访问外部存储次数

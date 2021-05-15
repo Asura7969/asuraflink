@@ -2,7 +2,7 @@ package com.asuraflink.sql.rule
 
 import java.util
 
-import com.asuraflink.sql.utils.AddRuleUtils
+import com.asuraflink.sql.utils.RuleUtils
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.rel.RelNode
@@ -25,7 +25,7 @@ class KeyByLookupRule extends RelOptRule(
     val tableConfig = call.getPlanner.getContext.unwrap(classOf[FlinkContext]).getTableConfig
     val execLookupJoin: StreamExecLookupJoin = call.rel(0)
     execLookupJoin
-    tableConfig.getConfiguration.getBoolean(AddRuleUtils.LOOKUP_KEY_BY_ENABLE, false)
+    tableConfig.getConfiguration.getBoolean(RuleUtils.LOOKUP_KEY_BY_ENABLE, false)
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
