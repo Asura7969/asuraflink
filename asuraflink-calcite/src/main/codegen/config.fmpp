@@ -41,11 +41,13 @@ data: {
     # List of additional classes and packages to import.
     # Example. "org.apache.calcite.sql.*", "java.util.List".
     imports: [
+        "com.asuraflink.custom.operator.AlterTable"
     ]
 
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
     # keyword add it to 'nonReservedKeywords' section.
     keywords: [
+        "RENAME"
     ]
 
     # List of keywords from "keywords" section that are not reserved.
@@ -382,6 +384,7 @@ data: {
     # Return type of method implementation should be 'SqlNode'.
     # Example: SqlShowDatabases(), SqlShowTables().
     statementParserMethods: [
+        "AlterTable()"
     ]
 
     # List of methods for parsing custom literals.
