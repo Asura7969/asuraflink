@@ -1,7 +1,8 @@
 package com.asuraflink.sql.rule;
 
 import com.asuraflink.sql.delay.DelayedJoinTest;
-import com.asuraflink.sql.utils.AddRuleUtils;
+import com.asuraflink.sql.utils.RuleUtils;
+import lombok.val;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -29,13 +30,20 @@ public class AddMyLookupRule {
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, envSettings);
 
         // ---------------------------- 添加自定义规则 ----------------------------
-        FlinkChainedProgram<StreamOptimizeContext> program = AddRuleUtils.addLookupKeyBy(tEnv);
+//        FlinkChainedProgram<StreamOptimizeContext> program =
+//                RuleUtils.apply(tEnv)
+//                        .addLookupKeyBy()
+//                        .addBroadcastTemporalLookupJoinRule()
+//                        .build();
+
+        RuleUtils.setUpCurrentRule(tEnv, BroadcastTemporal.LOOKUP_BROADCAST_JOIN_WITH_FILTER());
+
         // 开启 keyby
-        tEnv.getConfig().getConfiguration().setBoolean(AddRuleUtils.LOOKUP_KEY_BY_ENABLE(), true);
+//        tEnv.getConfig().getConfiguration().setBoolean(RuleUtils.LOOKUP_KEY_BY_ENABLE(), true);
 
 
-        CalciteConfig cc = new CalciteConfigBuilder().replaceStreamProgram(program).build();
-        tEnv.getConfig().setPlannerConfig(cc);
+//        CalciteConfig cc = new CalciteConfigBuilder().replaceStreamProgram(program).build();
+//        tEnv.getConfig().setPlannerConfig(cc);
 
 
         DataStreamSource<Tuple2<String, String>> continueSource = env.addSource(new DelayedJoinTest.ContinueSource());
