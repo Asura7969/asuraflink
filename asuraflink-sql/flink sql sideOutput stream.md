@@ -647,7 +647,7 @@ object SideOutputCodeUtils {
           }
       }.map {
       case (field, index) =>
-        CodeGenUtils.rowFieldReadAccess(ctx, index, inputTerm, field.getType)
+        // CodeGenUtils.rowFieldReadAccess(ctx, index, inputTerm, field.getType)
         rowFieldReadAccess(ctx, index.toString, inputTerm, field.getType)
     }.mkString(", ")
 
