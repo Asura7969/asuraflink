@@ -22,7 +22,7 @@ flink版本 : 1.12.0
 * [Flink 维表延迟join](https://github.com/Asura7969/asuraflink/blob/main/asuraflink-sql/flink%E7%BB%B4%E8%A1%A8%E5%BB%B6%E8%BF%9Fjoin.md)
 * [Flink 维表 key by join](https://github.com/Asura7969/asuraflink/blob/main/asuraflink-sql/flink%E7%BB%B4%E8%A1%A8keyby%20join.md)
 * [Flink Mini-Batch 维表 Join](https://github.com/Asura7969/asuraflink/blob/main/asuraflink-sql/flink%20%E7%BB%B4%E8%A1%A8minibatch.md)
-* [Flink Sql 侧流输出（未完待续）](https://github.com/Asura7969/asuraflink/blob/main/asuraflink-sql/flink%20sql%20sideOutput%20stream.md)
+* [Flink Sql 侧流输出（一）](https://github.com/Asura7969/asuraflink/blob/main/asuraflink-sql/flink%20sql%20sideOutput%20stream.md)
 
 
 

@@ -16,12 +16,12 @@ import static org.apache.flink.table.api.Expressions.$;
  */
 public class MultiSink {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
 
         Configuration configuration = new Configuration();
-        configuration.setBoolean("table.optimizer.reuse-optimize-block-with-digest-enabled", true);
+//        configuration.setBoolean("table.optimizer.reuse-optimize-block-with-digest-enabled", true);
         tEnv.getConfig().addConfiguration(configuration);
 
         DataStreamSource<Tuple2<String, String>> continueSource = env.addSource(new ContinueSource());
