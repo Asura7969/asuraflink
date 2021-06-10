@@ -1431,3 +1431,22 @@ SqlDrop SqlDropExtended(Span s, boolean replace) :
         return drop;
     }
 }
+
+SqlCall GroupByNewWindowingCall():
+{
+    final Span s;
+    final List<SqlNode> args;
+    final SqlOperator op;
+}
+{
+    (
+        <INCREMENT>
+        {
+            s = span();
+            op = FlinkSqlOperatorTable.INCREMENT_OLD;
+        }
+    )
+    args = UnquantifiedFunctionParameterList(ExprContext.ACCEPT_SUB_QUERY) {
+        return op.createCall(s.end(this), args);
+    }
+}

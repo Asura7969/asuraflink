@@ -75,6 +75,7 @@
     "org.apache.calcite.sql.SqlAlienSystemTypeNameSpec"
     "org.apache.calcite.sql.SqlCreate"
     "org.apache.calcite.sql.SqlDrop"
+    "org.apache.flink.sql.parser.func.FlinkSqlOperatorTable"
     "java.util.List"
     "java.util.ArrayList"
   ]
@@ -487,6 +488,7 @@
   # Return type of method implementation should be "SqlNode".
   # Example: DateFunctionCall().
   builtinFunctionCallMethods: [
+    "GroupByNewWindowingCall()"
   ]
 
   # List of methods for parsing extensions to "ALTER <scope>" calls.
