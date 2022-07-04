@@ -39,7 +39,8 @@ under the License.
         <module>asuraflink-calcite</module>
         <module>flink-sql-parser</module>
         <module>asuraflink-sideoutput</module>
-    </modules>
+		<module>asuraflink-cdc</module>
+	</modules>
 	<packaging>pom</packaging>
 
 	<name>asuraflink</name>
