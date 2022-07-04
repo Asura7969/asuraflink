@@ -1,4 +1,9 @@
-# Flink Sql SideOutput Stream
+# Flink Sql SideOutput Stream(一)
+
+> 本章并没有实现完成, 到最后发现 sink 端不好搞，不感兴趣的可以直接看第二篇内容（本章内容中涉及到的代码与第二章大部分一样，只是处理的环节不同）
+
+## 实现原理
+![sideOutput(一).png](http://ww1.sinaimg.cn/large/003i2GtDgy1gr69krbftxj60fg0c7my802.jpg)
 
 预想的使用示例如下:
 
@@ -740,6 +745,7 @@ object SideOutputCodeUtils {
   : String = t.getTypeRoot match {
     // ordered by type root definition
     case CHAR | VARCHAR =>
+      // 源码中也有该实现, 但对于 String 参数并没有调用 toString() 方法
       s"(($BINARY_STRING) $rowTerm.getString($indexTerm)).toString()"
     case BOOLEAN =>
       s"$rowTerm.getBoolean($indexTerm)"
@@ -782,7 +788,8 @@ object SideOutputCodeUtils {
 
 注意事项: codegen, 避免使用泛型类
 ```java
-OutputTag<Integer> outputTag = new OutputTag<Integer>("a"){}  // 运行时会提取不到 OutputTag 的具体类型
+// 运行时会提取不到 OutputTag 的具体类型
+OutputTag<Integer> outputTag = new OutputTag<Integer>("a"){};
 ```
 
 ```java
@@ -805,9 +812,13 @@ Caused by: org.apache.flink.api.common.functions.InvalidTypesException: The type
 
 应该指定 `OutputTag` 的 `TypeInformation`
 ```java
-OutputTag outputTag = new OutputTag("a", TypeInformation.of(A.class)){}
+OutputTag outputTag = new OutputTag("a", TypeInformation.of(Integer.class)){};
 ```
 
 ## 六、添加 Sink 输出
 
-# 未完待续
+### 未完待续 ...
+
+# 2000 YEARS LATER ...
+![捂脸表情包.jpeg](http://ww1.sinaimg.cn/large/003i2GtDgy1gr6awupeqlj60dw0dwglw02.jpg)
+## 续不下去，另辟蹊径了，哈哈哈哈哈😃

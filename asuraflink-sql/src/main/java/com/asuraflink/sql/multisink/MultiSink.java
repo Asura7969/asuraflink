@@ -1,7 +1,7 @@
 package com.asuraflink.sql.multisink;
 
-import com.asuraflink.sql.delay.DelayedJoinTest;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
@@ -16,9 +16,13 @@ import static org.apache.flink.table.api.Expressions.$;
  */
 public class MultiSink {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
+
+        Configuration configuration = new Configuration();
+//        configuration.setBoolean("table.optimizer.reuse-optimize-block-with-digest-enabled", true);
+        tEnv.getConfig().addConfiguration(configuration);
 
         DataStreamSource<Tuple2<String, String>> continueSource = env.addSource(new ContinueSource());
         Table t = tEnv.fromDataStream(continueSource,

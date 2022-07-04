@@ -52,6 +52,8 @@ import org.apache.flink.sql.parser.SqlProperty;
 import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
 import org.apache.calcite.sql.SqlCreate;
 import org.apache.calcite.sql.SqlDrop;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.flink.sql.parser.func.FlinkSqlOperatorTable;
 import java.util.List;
 import java.util.ArrayList;
 import org.apache.calcite.avatica.util.Casing;
