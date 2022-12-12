@@ -1,7 +1,6 @@
 package com.asuraflink.sink.multithread;
 
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.shaded.curator.org.apache.curator.shaded.com.google.common.collect.Queues;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 
 import java.util.concurrent.LinkedBlockingQueue;
@@ -23,7 +22,7 @@ public class MultiThreadConsumerSink<T> extends RichSinkFunction<T> {
         ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(DEFAULT_CLIENT_THREAD_NUM, DEFAULT_CLIENT_THREAD_NUM,
                 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
         // new 一个容量为 DEFAULT_QUEUE_CAPACITY 的数据缓冲队列
-        this.bufferQueue = Queues.newLinkedBlockingQueue(DEFAULT_QUEUE_CAPACITY);
+        this.bufferQueue = new LinkedBlockingQueue<>(DEFAULT_QUEUE_CAPACITY);
         // 创建并开启消费者线程
         MultiThreadConsumerClient consumerClient = new MultiThreadConsumerClient(bufferQueue);
         for (int i=0; i < DEFAULT_CLIENT_THREAD_NUM; i++) {

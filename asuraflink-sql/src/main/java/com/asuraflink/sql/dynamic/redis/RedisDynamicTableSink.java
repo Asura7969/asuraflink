@@ -1,6 +1,5 @@
 package com.asuraflink.sql.dynamic.redis;
 
-import org.apache.flink.calcite.shaded.com.google.common.base.Preconditions;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.streaming.connectors.redis.RedisSink;
 import org.apache.flink.streaming.connectors.redis.common.config.FlinkJedisPoolConfig;
@@ -17,6 +16,7 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.LogicalTypeRoot;
 import org.apache.flink.types.RowKind;
+import org.apache.flink.util.Preconditions;
 
 import static com.asuraflink.sql.dynamic.redis.RedisDynamicTableFactory.*;
 

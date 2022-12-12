@@ -2,7 +2,7 @@ package com.asuraflink.sql.dynamic.redis;
 
 import com.asuraflink.sql.dynamic.redis.config.RedisOptions;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
-import org.apache.flink.calcite.shaded.com.google.common.base.Preconditions;
+import org.apache.flink.util.Preconditions;
 import redis.clients.jedis.JedisPool;
 
 /**

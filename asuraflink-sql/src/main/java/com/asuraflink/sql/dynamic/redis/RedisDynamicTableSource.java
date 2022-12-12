@@ -3,13 +3,13 @@ package com.asuraflink.sql.dynamic.redis;
 import com.asuraflink.sql.dynamic.redis.config.RedisLookupOptions;
 import com.asuraflink.sql.dynamic.redis.config.RedisOptions;
 import com.asuraflink.sql.dynamic.redis.config.RedisReadOptions;
-import org.apache.flink.calcite.shaded.com.google.common.base.Preconditions;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.source.*;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.LogicalTypeRoot;
+import org.apache.flink.util.Preconditions;
 
 public class RedisDynamicTableSource implements LookupTableSource, ScanTableSource {
     private final RedisOptions redisOptions;

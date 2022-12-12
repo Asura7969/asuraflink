@@ -16,7 +16,6 @@ public class UserBehavior {
     public static void main(String[] args) throws Exception {
 
         EnvironmentSettings settings = EnvironmentSettings.newInstance()
-                .useBlinkPlanner()
                 .inStreamingMode()
                 .build();
         TableEnvironment tEnv = TableEnvironment.create(settings);
@@ -49,7 +48,7 @@ public class UserBehavior {
                 "    WATERMARK FOR ts AS ts - INTERVAL '5' SECOND" +
                 ")" + withKafka;
 
-        tEnv.sqlUpdate(waterMarkDDL);
+        tEnv.executeSql(waterMarkDDL);
 
         tEnv.executeSql("DESCRIBE user_log").print();
 
@@ -102,7 +101,7 @@ public class UserBehavior {
 
 
         tEnv.executeSql(sessionSql).print();
-        tEnv.execute("SQL Job");
+//        tEnv.execute("SQL Job");
     }
 
 

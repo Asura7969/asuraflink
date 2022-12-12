@@ -3,7 +3,6 @@ package com.asuraflink.sql.dynamic.redis;
 import com.asuraflink.sql.dynamic.redis.config.RedisLookupOptions;
 import com.asuraflink.sql.dynamic.redis.config.RedisOptions;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.flink.calcite.shaded.com.google.common.base.Preconditions;
 import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.StringData;
@@ -11,6 +10,7 @@ import org.apache.flink.table.functions.FunctionContext;
 import org.apache.flink.table.functions.TableFunction;
 import org.apache.flink.table.runtime.operators.join.lookup.DelayAttributes;
 import org.apache.flink.table.runtime.operators.join.lookup.DelayStrategy;
+import org.apache.flink.util.Preconditions;
 
 /**
  * https://cloud.tencent.com/developer/article/1560553

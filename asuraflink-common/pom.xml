@@ -18,7 +18,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>
-            <artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
+            <artifactId>flink-streaming-java</artifactId>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>
@@ -43,6 +43,10 @@
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-json</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-runtime</artifactId>
+        </dependency>
 
         <!-- JSON RowData schema test dependency -->
 <!--        <dependency>-->
@@ -51,17 +55,11 @@
 <!--        </dependency>-->
 
         <!-- Json filesystem format factory ITCase test dependency -->
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-table-planner-blink_${scala.binary.version}</artifactId>
-<!--            <scope>test</scope>-->
-<!--            <type>test-jar</type>-->
-        </dependency>
 
         <!-- test utils dependency -->
         <dependency>
             <groupId>org.apache.flink</groupId>
-            <artifactId>flink-test-utils_${scala.binary.version}</artifactId>
+            <artifactId>flink-test-utils</artifactId>
             <scope>test</scope>
         </dependency>
 
