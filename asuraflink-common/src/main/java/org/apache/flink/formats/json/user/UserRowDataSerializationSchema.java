@@ -1,9 +1,9 @@
 package org.apache.flink.formats.json.user;
 
 import org.apache.flink.api.common.serialization.SerializationSchema;
-import org.apache.flink.formats.json.JsonOptions;
+import org.apache.flink.formats.json.JsonFormatOptions;
 import org.apache.flink.formats.json.JsonRowDataSerializationSchema;
-import org.apache.flink.formats.json.TimestampFormat;
+import org.apache.flink.formats.common.TimestampFormat;
 
 import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.RowData;
@@ -22,14 +22,15 @@ public class UserRowDataSerializationSchema implements SerializationSchema<RowDa
     public UserRowDataSerializationSchema(
             RowType rowType,
             TimestampFormat timestampFormat,
-            JsonOptions.MapNullKeyMode mapNullKeyMode,
+            JsonFormatOptions.MapNullKeyMode mapNullKeyMode,
             String mapNullKeyLiteral) {
         this.rowType = checkNotNull(rowType);
         jsonSerializer = new JsonRowDataSerializationSchema(
                 rowType,
                 timestampFormat,
                 mapNullKeyMode,
-                mapNullKeyLiteral);
+                mapNullKeyLiteral,
+                false);
     }
 
 //    @Override

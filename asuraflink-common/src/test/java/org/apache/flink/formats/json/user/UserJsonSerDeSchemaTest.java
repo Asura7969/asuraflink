@@ -18,8 +18,8 @@
 
 package org.apache.flink.formats.json.user;
 
-import org.apache.flink.formats.json.JsonOptions;
-import org.apache.flink.formats.json.TimestampFormat;
+import org.apache.flink.formats.json.JsonFormatOptions;
+import org.apache.flink.formats.common.TimestampFormat;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.runtime.typeutils.InternalTypeInfo;
 import org.apache.flink.table.types.logical.RowType;
@@ -107,7 +107,7 @@ public class UserJsonSerDeSchemaTest {
 		UserRowDataSerializationSchema serializationSchema = new UserRowDataSerializationSchema(
 			SCHEMA,
 			TimestampFormat.ISO_8601,
-			JsonOptions.MapNullKeyMode.LITERAL,
+				JsonFormatOptions.MapNullKeyMode.LITERAL,
 			"null"
 		);
 		serializationSchema.open(null);

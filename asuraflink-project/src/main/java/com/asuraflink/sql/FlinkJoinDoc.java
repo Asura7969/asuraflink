@@ -1,18 +1,11 @@
 package com.asuraflink.sql;
 
 import org.apache.flink.api.common.RuntimeExecutionMode;
-import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
-import org.apache.flink.table.api.TableConfig;
-import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.bridge.java.internal.StreamTableEnvironmentImpl;
 import org.apache.flink.table.api.internal.TableEnvironmentImpl;
-import org.apache.flink.table.descriptors.Json;
-import org.apache.flink.table.descriptors.Kafka;
-import org.apache.flink.table.descriptors.Rowtime;
-import org.apache.flink.table.descriptors.Schema;
 
 /**
  * https://mp.weixin.qq.com/s?__biz=MzU3Mzg4OTMyNQ==&mid=2247490009&idx=1&sn=3a218df4f2f88d46775c82358fb01ea3&chksm=fd3b979bca4c1e8d5e0b4b92fa79c4a7a3fbedc7d7d6b18f0c7816c4ddca6bcad7d8607b6d41&token=1623898787&lang=zh_CN%23rd
@@ -33,10 +26,10 @@ public class FlinkJoinDoc {
         env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
 
         // use blink
-        EnvironmentSettings settings = EnvironmentSettings.newInstance().useBlinkPlanner()
+        EnvironmentSettings settings = EnvironmentSettings.newInstance()
                 .inStreamingMode()
                 .build();
-        TableEnvironmentImpl tEnv = (TableEnvironmentImpl) StreamTableEnvironmentImpl.create(env, settings, new TableConfig());
+        TableEnvironmentImpl tEnv = (TableEnvironmentImpl) StreamTableEnvironmentImpl.create(env, settings);
 
 
         String orderDDL =
@@ -80,9 +73,9 @@ public class FlinkJoinDoc {
                 "  'format' = 'avro-confluent'\n" +
                 ");";
         String shiptimeDDL = "省略";
-        tEnv.sqlUpdate(orderDDL);
-        tEnv.sqlUpdate(productDDL);
-        tEnv.sqlUpdate(shiptimeDDL);
+        tEnv.executeSql(orderDDL);
+        tEnv.executeSql(productDDL);
+        tEnv.executeSql(shiptimeDDL);
 
         /**
          * regular join(没有数据清理机制)

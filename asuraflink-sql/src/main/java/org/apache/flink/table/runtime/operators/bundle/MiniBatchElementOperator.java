@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.runtime.operators.bundle;
 
+import org.apache.flink.api.common.operators.ProcessingTimeService;
 import org.apache.flink.metrics.Gauge;
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
@@ -36,7 +37,7 @@ import java.util.List;
 
 
 public class MiniBatchElementOperator extends AbstractStreamOperator<RowData>
-        implements OneInputStreamOperator<RowData, RowData>, ProcessingTimeCallback {
+        implements OneInputStreamOperator<RowData, RowData>, ProcessingTimeService.ProcessingTimeCallback {
 
     private static final long serialVersionUID = 1L;
 

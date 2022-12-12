@@ -1,7 +1,7 @@
 package com.asuraflink.sql.utils
 
 import java.util
-import com.asuraflink.sql.rule.{BroadcastTemporal, KeyByLookupRule}
+import com.asuraflink.sql.rule.{BroadcastTemporal}
 import org.apache.calcite.plan.RelOptRule
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.tools.RuleSets
@@ -21,7 +21,7 @@ class RuleUtils(tEnv: StreamTableEnvironment) {
   def addLookupKeyBy(): RuleUtils = {
 
     val newPhysicalRewriteList = new util.ArrayList[RelOptRule]()
-    newPhysicalRewriteList.add(KeyByLookupRule.INSTANCE)
+//    newPhysicalRewriteList.add(KeyByLookupRule.INSTANCE)
     val newPhysicalRewrite = RuleSets.ofList(newPhysicalRewriteList)
 
     program.addLast("myRule",

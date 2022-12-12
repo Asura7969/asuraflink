@@ -1,20 +1,26 @@
 package com.asuraflink.checkpoint;
 
+import org.apache.flink.contrib.streaming.state.EmbeddedRocksDBStateBackend;
 import org.apache.flink.runtime.checkpoint.Checkpoints;
 import org.apache.flink.runtime.checkpoint.OperatorState;
 import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
 //import org.apache.flink.runtime.checkpoint.metadata.MetadataSerializer;
-import org.apache.flink.runtime.checkpoint.savepoint.Savepoint;
+import org.apache.flink.runtime.checkpoint.metadata.CheckpointMetadata;
 import org.apache.flink.runtime.execution.librarycache.LibraryCacheManager;
 import org.apache.flink.runtime.state.*;
 import org.apache.flink.runtime.state.filesystem.FileStateHandle;
+import org.apache.flink.state.api.SavepointReader;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.*;
 
 import java.io.*;
 import java.net.URL;
+import java.sql.Savepoint;
 import java.util.Map;
+
+import static java.util.Collections.emptyList;
 
 /**
  * https://mp.weixin.qq.com/s?__biz=MzkxOTE3MDU5MQ==&mid=2247484354&idx=1&sn=d9aa2180cb3eaec64515a8f2b018c1d4&source=41#wechat_redirect
@@ -26,6 +32,7 @@ public class DetectUselessFilesOfCHK {
 //        URL.setURLStreamHandlerFactory(new FsUrlStreamHandlerFactory());
 //    }
     public static void main(String[] args) throws Exception {
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         Configuration conf = new Configuration();
 //        conf.set("fs.default.name", "hdfs://flashHadoopUAT");
@@ -45,17 +52,18 @@ public class DetectUselessFilesOfCHK {
 //        FileInputStream fis = new FileInputStream(f);
         BufferedInputStream bis = new BufferedInputStream(in);
         DataInputStream dis = new DataInputStream(bis);
+        CheckpointMetadata metadata = new CheckpointMetadata(1L, emptyList(), emptyList(), null);
 
-        Savepoint savepoint = Checkpoints.loadCheckpointMetadata(dis,
+        CheckpointMetadata checkpointMetadata = Checkpoints.loadCheckpointMetadata(dis,
 //                MetadataSerializer.class.getClassLoader());
-                LibraryCacheManager.class.getClassLoader());
+                metadata.getClass().getClassLoader(), "");
 
         // 打印当前的 CheckpointId
-        System.out.println(savepoint.getCheckpointId());
+        System.out.println(checkpointMetadata.getCheckpointId());
 
         // 遍历 OperatorState，这里的每个 OperatorState 对应一个 Flink 任务的 Operator 算子
         // 不要与 OperatorState  和 KeyedState 混淆，不是一个层级的概念
-        for (OperatorState operatorState : savepoint.getOperatorStates()) {
+        for (OperatorState operatorState : checkpointMetadata.getOperatorStates()) {
             System.out.println(operatorState);
             // 当前算子的状态大小为 0 ，表示算子不带状态，直接退出
             if (operatorState.getStateSize() == 0) {

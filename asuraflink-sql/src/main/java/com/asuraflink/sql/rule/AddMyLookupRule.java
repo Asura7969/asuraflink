@@ -9,9 +9,6 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-import org.apache.flink.table.planner.calcite.CalciteConfigBuilder;
-import org.apache.flink.table.planner.plan.optimize.program.*;
-import org.apache.flink.table.planner.calcite.CalciteConfig;
 
 
 import static org.apache.flink.table.api.Expressions.$;
@@ -26,7 +23,7 @@ public class AddMyLookupRule {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         EnvironmentSettings envSettings =
-                EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
+                EnvironmentSettings.newInstance().inStreamingMode().build();
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, envSettings);
 
         // ---------------------------- 添加自定义规则 ----------------------------
@@ -81,7 +78,6 @@ public class AddMyLookupRule {
 
         tEnv.executeSql(sqlQuery).print();
 
-        tEnv.execute("AddMyLookupRule");
     }
 
 
