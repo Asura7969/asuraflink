@@ -20,15 +20,17 @@ package example;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.DataTypes;
-import org.apache.flink.table.api.Schema;
-import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.*;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.table.api.bridge.java.internal.StreamTableEnvironmentImpl;
+import org.apache.flink.table.api.internal.TableEnvironmentImpl;
 import org.apache.flink.table.connector.ChangelogMode;
+import org.apache.flink.table.operations.*;
 import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Example for demonstrating the use of temporal join between a table backed by a {@link DataStream}
@@ -55,6 +57,26 @@ public class TemporalJoinSQLExample {
 
         // set up the Java Table API
         final StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env);
+
+        EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().build();
+
+        TableEnvironmentImpl tEnv = TableEnvironmentImpl.create(settings);
+        List<Operation> operations = tEnv.getParser().parse("sql");
+        operations.forEach(operation -> {
+            if (operation instanceof UnregisteredSinkModifyOperation) {
+
+            } else if (operation instanceof CollectModifyOperation) {
+
+            } else if (operation instanceof SinkModifyOperation) {
+
+            } else if (operation instanceof ExternalModifyOperation) {
+
+            } else if (operation instanceof OutputConversionModifyOperation) {
+
+            } else {
+                throw new TableException("Unsupported ModifyOperation: " + operation);
+            }
+        });
 
         // Create a changelog stream of currency rate
         final DataStream<Row> currencyRate =
