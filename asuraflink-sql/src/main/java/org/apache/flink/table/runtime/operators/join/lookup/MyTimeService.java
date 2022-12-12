@@ -1,7 +1,6 @@
 package org.apache.flink.table.runtime.operators.join.lookup;
 
 import org.apache.flink.api.common.time.Deadline;
-import org.apache.flink.streaming.runtime.tasks.ProcessingTimeCallback;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeServiceUtil;
 import org.apache.flink.streaming.runtime.tasks.TimerService;
 import org.apache.flink.util.Preconditions;

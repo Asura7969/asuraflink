@@ -2,7 +2,6 @@ package com.asuraflink.sql.rule;
 
 import com.asuraflink.sql.delay.DelayedJoinTest;
 import com.asuraflink.sql.utils.RuleUtils;
-import lombok.val;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
