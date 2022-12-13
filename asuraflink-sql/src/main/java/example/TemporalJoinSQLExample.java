@@ -18,23 +18,15 @@
 
 package example;
 
-import org.apache.calcite.rel.RelNode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.*;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-import org.apache.flink.table.api.bridge.java.internal.StreamTableEnvironmentImpl;
-import org.apache.flink.table.api.internal.TableEnvironmentImpl;
-import org.apache.flink.table.api.internal.TableImpl;
-import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.ChangelogMode;
-import org.apache.flink.table.operations.*;
-import org.apache.flink.table.planner.operations.PlannerQueryOperation;
 import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
 
 import java.time.Instant;
-import java.util.List;
 
 /**
  * Example for demonstrating the use of temporal join between a table backed by a {@link DataStream}
@@ -112,59 +104,24 @@ public class TemporalJoinSQLExample {
         // Register the table as a view, it will be accessible under a name
         tableEnv.createTemporaryView("transaction", trxTable);
 
+
+        String sql =
+                "    SELECT\n"
+                + "        t.id,\n"
+                + "        t.trx_time,\n"
+                + "        c.currency_code,\n"
+                + "        t.amount,\n"
+                + "        t.amount * c.euro_rate AS total_euro\n"
+                + "    FROM transaction t\n"
+                + "    JOIN currency_rate FOR SYSTEM_TIME AS OF t.trx_time AS c\n"
+                + "    ON t.currency_code = c.currency_code order by t.trx_time; ";
+
         // temporal join the two tables
         final Table result =
-                tableEnv.sqlQuery(
-                        "    SELECT\n"
-                                + "        t.id,\n"
-                                + "        t.trx_time,\n"
-                                + "        c.currency_code,\n"
-                                + "        t.amount,\n"
-                                + "        t.amount * c.euro_rate AS total_euro\n"
-                                + "    FROM transaction t\n"
-                                + "    JOIN currency_rate FOR SYSTEM_TIME AS OF t.trx_time AS c\n"
-                                + "    ON t.currency_code = c.currency_code; ");
+                tableEnv.sqlQuery(sql);
 
         // convert the Table back to an insert-only DataStream of type `Order`
         tableEnv.toDataStream(result, EnrichedTransaction.class).print();
-
-
-        // --------------- expand ---------------
-        TableEnvironmentImpl tEnv =
-                (TableEnvironmentImpl) ((TableImpl) result).getTableEnvironment();
-        List<Operation> operations = tEnv.getParser().parse(
-                "    SELECT\n"
-                        + "        t.id,\n"
-                        + "        t.trx_time,\n"
-                        + "        c.currency_code,\n"
-                        + "        t.amount,\n"
-                        + "        t.amount * c.euro_rate AS total_euro\n"
-                        + "    FROM transaction t\n"
-                        + "    JOIN currency_rate FOR SYSTEM_TIME AS OF t.trx_time AS c\n"
-                        + "    ON t.currency_code = c.currency_code; "
-        );
-        operations.forEach(operation -> {
-            if (operation instanceof UnregisteredSinkModifyOperation) {
-                System.out.println("UnregisteredSinkModifyOperation");
-            } else if (operation instanceof CollectModifyOperation) {
-                System.out.println("CollectModifyOperation");
-            } else if (operation instanceof SinkModifyOperation) {
-                System.out.println("SinkModifyOperation");
-            } else if (operation instanceof ExternalModifyOperation) {
-                System.out.println("ExternalModifyOperation");
-            } else if (operation instanceof OutputConversionModifyOperation) {
-                System.out.println("OutputConversionModifyOperation");
-            } else if (operation instanceof PlannerQueryOperation) {
-                final PlannerQueryOperation pqo = (PlannerQueryOperation) operation;
-                final RelNode calciteTree = pqo.getCalciteTree();
-                final ResolvedSchema resolvedSchema = pqo.getResolvedSchema();
-            } else {
-                throw new TableException("Unsupported ModifyOperation: " + operation);
-            }
-        });
-
-
-
 
         // after the table program is converted to a DataStream program,
         // we must use `env.execute()` to submit the job

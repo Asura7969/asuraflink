@@ -1,141 +1,181 @@
 package org.apache.flink.table.planner.delegation
 
 import org.slf4j.{Logger, LoggerFactory}
-import org.apache.calcite.plan.RelOptTable
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
 import org.apache.calcite.rel.core.{Join, TableScan}
-import org.apache.calcite.rel.metadata.RelColumnOrigin
-import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.commons.collections.CollectionUtils
-import org.apache.flink.table.planner.plan.nodes.physical.stream.{StreamPhysicalCalc, StreamPhysicalCalcBase, StreamPhysicalSink, StreamPhysicalTemporalJoin}
-import org.apache.flink.table.planner.plan.schema.{FlinkPreparingTableBase, TableSourceTable}
-import org.apache.flink.table.types.logical.RowType
+import org.apache.flink.table.catalog.{AbstractCatalog, Catalog, CatalogBaseTable, CatalogManager, CatalogTable, CatalogView, GenericInMemoryCatalog, ObjectIdentifier, ObjectPath, ResolvedCatalogBaseTable}
+import org.apache.flink.table.planner.plan.nodes.physical.stream.{StreamPhysicalDataStreamScan, StreamPhysicalLegacySink, StreamPhysicalLegacyTableSourceScan, StreamPhysicalLookupJoin, StreamPhysicalRel, StreamPhysicalSink, StreamPhysicalSort, StreamPhysicalTableSourceScan}
+import org.apache.flink.table.planner.plan.schema.{FlinkPreparingTableBase, LegacyTableSourceTable, TableSourceTable}
 
 import scala.collection.JavaConversions._
 import java.util
+import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter}
 /**
  * @author asura7969
  * @create 2022-12-12-20:15
  */
 object CollectLineage {
   val LOG: Logger = LoggerFactory.getLogger(classOf[CollectLineage])
+  val UNKNOWN:String = "UNKNOWN"
 
 
-  private def parseRelNode(downTable: String, inputs: util.List[RelNode]): Unit = {
-    inputs.forEach {
+
+  private def findFromCatalog(identifierName: String,
+                              catalogManager: CatalogManager): Option[TableName] = {
+    val tablePath = identifierName.substring(identifierName.indexOf(".") + 1)
+    val catalogs = getCatalog[util.Map[String, Catalog]]("catalogs", catalogManager)
+    catalogs.asScala.find(t => {
+      t._2 match {
+        case catalog: GenericInMemoryCatalog =>
+          val objectPath = ObjectPath.fromString(tablePath)
+          catalog.tableExists(objectPath)
+      }
+    }).map(_ => TableName(identifierName, ""))
+
+  }
+
+
+  private def findFromTemporary(identifierName: String,
+                                catalogManager: CatalogManager): Option[TableName] = {
+    val temporaryTables = getCatalog[util.Map[ObjectIdentifier, CatalogBaseTable]]("temporaryTables", catalogManager)
+
+    temporaryTables.asScala.find(t => {
+      t._2 match {
+        case rcbt: ResolvedCatalogBaseTable[_] =>
+          // rcbt.getOrigin.getDescription
+          rcbt.getOrigin.getComment.contains(identifierName)
+        case view: CatalogView =>
+          LOG.warn("temporal CatalogView 解析还未开发")
+          false
+        case table: CatalogTable =>
+          LOG.warn("temporal CatalogTable 解析还未开发")
+          false
+      }
+    }).map(a => TableName(a._1.asSummaryString(), identifierName, isTemporal = true))
+  }
+
+  private def parseRelNode(downTable: String,
+                           inputs: util.List[RelNode],
+                           catalogManager: CatalogManager): Seq[Table] = {
+    inputs.flatMap {
       case join: Join =>
         val joinType = join.getJoinType
         val condition = join.getCondition
         val left = join.getLeft
         val right = join.getRight
 
-        parseRelNode(downTable, left.getInputs)
-        parseRelNode(downTable, right.getInputs)
-      case input@(tableScan: TableScan) =>
+        val leftTable = parseRelNode(downTable, left.getInputs, catalogManager)
+        val rightTable = parseRelNode(downTable, right.getInputs, catalogManager)
+        leftTable.++(rightTable)
+
+      case tableScan@(_: TableScan) =>
         tableScan.getTable match {
           case tb: FlinkPreparingTableBase =>
-            tb match {
-              case tst: TableSourceTable => {
-                val manager = tst.flinkContext.getCatalogManager
-                val metadataQuery = input.getCluster.getMetadataQuery()
-                val origins = metadataQuery.getColumnOrigins(input, 0)
-                origins.foreach(relColumnOrigin => {
-                  println(relColumnOrigin.getOriginTable.getQualifiedName)
-                })
+            val tableName: TableName = tb match {
+              case tst: TableSourceTable =>
+                val fullName = tst.contextResolvedTable.getIdentifier.asSummaryString()
+                findFromTemporary(fullName, catalogManager)
+                  .getOrElse(findFromCatalog(fullName, catalogManager)
+                  .getOrElse(TableName.unknown()))
 
-                println(manager.listSchemas())
-                println(input)
-              }
+              case ltst: LegacyTableSourceTable[_] =>
+                val identifier = ltst.tableIdentifier
+                val schema = ltst.tableSource.getTableSchema
+                schema.getFieldDataTypes
+                TableName(identifier.asSummaryString(), "")
+              case _ =>
+                println(tb)
+                TableName.unknown()
             }
+            Seq(Table(tableName, tb.getRowType, Seq.empty))
 
-
-            printlnColumn(tb.toString, tb.getRowType)
+          case _ => Seq.empty
         }
+      case sptss@(_: StreamPhysicalTableSourceScan) =>
+        Seq(Table(TableName(sptss.tableSource.asSummaryString(), ""), sptss.getRowType, Seq.empty))
 
       case in =>
-        parseRelNode(downTable, in.getInputs)
+        parseRelNode(downTable, in.getInputs, catalogManager)
     }
-
   }
 
-  /**
-   * print column
-   * @param tableName tableName
-   * @param rowType rowType of table
-   */
-  private def printlnColumn(tableName: String, rowType: RelDataType): Unit = {
-    LOG.info(s"******************* Target table: $tableName *********************")
-    val fieldList: util.List[RelDataTypeField] = rowType.getFieldList
-    fieldList.forEach(field => {
-      LOG.info(s"filed name: ${field.getName}, type:${field.getType}")
-    })
-    LOG.info("***********************************************************************")
+  def getCatalog[T](fieldName: String, catalogManager: CatalogManager):T = {
+    val field = classOf[CatalogManager].getDeclaredField(fieldName)
+    field.setAccessible(true)
+    field.get(catalogManager).asInstanceOf[T]
   }
 
-  def buildFiledLineageResult(optRelNode: RelNode): util.ArrayList[AnyRef] = {
+  def buildLineageResult(catalogManager: CatalogManager, optRelNode: RelNode): Unit = {
 
-    // check the size of query and sink fields match
-    val sink = optRelNode.asInstanceOf[StreamPhysicalSink].tableSink
-    val sinkTableName = sink.asSummaryString()
+    if (optRelNode.isInstanceOf[StreamPhysicalRel]) {
+      optRelNode match {
+        case sps: StreamPhysicalSink =>
+          val sink = sps.tableSink
+          val sinkTableName = sink.asSummaryString()
 
-    printlnColumn(sinkTableName, optRelNode.getRowType)
+          val rootTable = Table(TableName(sinkTableName, ""), optRelNode.getRowType,
+            parseRelNode(sinkTableName, optRelNode.getInputs, catalogManager))
 
-    parseRelNode(sinkTableName, optRelNode.getInputs)
+          println(rootTable.toString)
+        case spds: StreamPhysicalDataStreamScan =>
 
+        case spls: StreamPhysicalLegacySink[_] =>
 
-    val rowType: RelDataType = optRelNode.getRowType
+        case spltss: StreamPhysicalLegacyTableSourceScan =>
 
-    val targetColumnList = rowType.getFieldNames
-    val metadataQuery = optRelNode.getCluster.getMetadataQuery
-    val resultList = new util.ArrayList[AnyRef]
-    var index = 0
-    while ( {
-      index < targetColumnList.size
-    }) {
-//      val targetColumn = targetColumnList.get(index)
-//      LOG.debug("**********************************************************")
-//      LOG.debug("Target table: {}", sinkTable)
-//      LOG.debug("Target column: {}", targetColumn)
-      val relColumnOriginSet = metadataQuery.getColumnOrigins(optRelNode, index)
-//      LOG.info()
-      if (CollectionUtils.isNotEmpty(relColumnOriginSet)) {
-//
-        for (relColumnOrigin <- relColumnOriginSet) { // table
-          val table: RelOptTable = relColumnOrigin.getOriginTable
-          val sourceTable = String.join(DELIMITER, table.getQualifiedName)
-//          // filed
-          val ordinal = relColumnOrigin.getOriginColumnOrdinal
-          // List<String> fieldNames = table.getRowType().getFieldNames();
-//          val fieldNames = table.asInstanceOf[TableSourceTable].catalogTable.getResolvedSchema.getColumnNames
-//          val sourceColumn = fieldNames.get(ordinal)
-//          LOG.debug("----------------------------------------------------------")
-//          LOG.debug("Source table: {}", sourceTable)
-//          LOG.debug("Source column: {}", sourceColumn)
-//          // add record
-//          resultList.add(buildResult(sourceTable, sourceColumn, sinkTable, targetColumn))
-        }
+        case splj: StreamPhysicalLookupJoin =>
+
+        case spsort: StreamPhysicalSort =>
+        case _@unknown =>
+          LOG.error(s"${unknown.getClass.getSimpleName} unsupport")
       }
-//
-      index += 1
+
+
+    } else {
+      LOG.warn(s"Only stream is supported.")
     }
-    resultList
+
   }
 
-
-//  private def validateSchema(sinkTable: String, relNode: RelNode, sinkFieldList: util.List[String]): Unit = {
-//    val queryFieldList = relNode.getRowType.getFieldNames
-//    if (queryFieldList.size ne sinkFieldList.size) throw new Nothing(String.format("Column types of query result and sink for %s do not match.\n" + "Query schema: %s\n" + "Sink schema:  %s", sinkTable, queryFieldList, sinkFieldList))
-//  }
-
-  val DELIMITER = "."
-//  private def buildResult(sourceTablePath: String, sourceColumn: String, targetTablePath: String, targetColumn: String) = {
-//    val sourceItems = sourceTablePath.split("\\" + DELIMITER)
-//    val targetItems = targetTablePath.split("\\" + DELIMITER)
-//    Result.builder.sourceCatalog(sourceItems(0)).sourceDatabase(sourceItems(1)).sourceTable(sourceItems(2)).sourceColumn(sourceColumn).targetCatalog(targetItems(0)).targetDatabase(targetItems(1)).targetTable(targetItems(2)).targetColumn(targetColumn).build
-//  }
 }
 
-class CollectLineage {
+class CollectLineage
 
+case class TableName(identifierName: String, anonymous:String, isTemporal:Boolean = false) {
+  override def toString: String = {
+    s"""
+       |$identifierName[$anonymous, isTemporal=$isTemporal]
+       |""".stripMargin
+  }
+}
+
+object TableName {
+  def unknown(): TableName = {
+    TableName(CollectLineage.UNKNOWN, CollectLineage.UNKNOWN)
+  }
+}
+
+/**
+ * 表
+ * @param name 表名
+ * @param rowType 列数据
+ * @param upNodes 上游表信息
+ */
+case class Table(name:TableName,
+                 rowType: RelDataType,
+                 upNodes: Seq[Table]) {
+  override def toString: String = {
+
+    val fieldList: util.List[RelDataTypeField] = rowType.getFieldList
+    val fields = fieldList.asScala
+      .map(field => s"filed name: ${field.getName}, type:${field.getType}")
+      .mkString("\n  ")
+    val deadLine = if (upNodes.nonEmpty) s"\n    ${upNodes.mkString("\n    ")}" else ""
+
+    s"""
+       |$name
+       |  $fields $deadLine
+       |""".stripMargin
+  }
 }
