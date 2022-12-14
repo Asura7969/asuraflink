@@ -56,6 +56,14 @@
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-csv</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.ververica</groupId>
+            <artifactId>flink-connector-mysql-cdc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-connector-kafka</artifactId>
+        </dependency>
 
         <!-- Slf4j -->
         <dependency>
