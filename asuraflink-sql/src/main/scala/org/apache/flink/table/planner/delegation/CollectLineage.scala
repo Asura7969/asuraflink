@@ -44,11 +44,17 @@ object CollectLineage {
       t._2 match {
         case rcbt: ResolvedCatalogBaseTable[_] =>
           // rcbt.getOrigin.getDescription
+          // TODO: 获取table配置信息 或者 rcbt继续匹配子类
+          rcbt.getOrigin.getOptions
           rcbt.getOrigin.getComment.contains(identifierName)
         case view: CatalogView =>
+          // TODO:
+        val options = view.getOptions
           LOG.warn("temporal CatalogView 解析还未开发")
           false
         case table: CatalogTable =>
+          // TODO:
+          val options = table.getOptions
           LOG.warn("temporal CatalogTable 解析还未开发")
           false
       }
