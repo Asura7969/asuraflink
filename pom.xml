@@ -25,20 +25,7 @@ under the License.
 	<artifactId>asuraflink</artifactId>
 	<version>0.1</version>
 	<modules>
-		<module>asuraflink-project</module>
-		<module>asuraflink-metrics</module>
-        <module>asuraflink-sink</module>
-		<module>asura-hbase</module>
-		<module>asuraflink-broadcast</module>
-		<module>asuraflink-common</module>
-        <module>asuraflink-checkpoint</module>
-		<module>asuraflink-produce</module>
 		<module>asuraflink-sql</module>
-        <module>asuraflink-window</module>
-        <module>asuraflink-calcite</module>
-        <module>flink-sql-parser</module>
-        <module>asuraflink-sideoutput</module>
-		<module>asuraflink-cdc</module>
 	</modules>
 	<packaging>pom</packaging>
 
@@ -62,155 +49,21 @@ under the License.
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<flink.version>1.16.0</flink.version>
-		<sl4j.version>1.7.7</sl4j.version>
-		<fastjson.version>1.2.62</fastjson.version>
-		<kafka.version>2.7.0</kafka.version>
-		<es.spark.version>6.0.0</es.spark.version>
-		<mysql.version>8.0.19</mysql.version>
-		<vertx.version>3.9.1</vertx.version>
-		<jetbrains.annotations.version>1.5.0</jetbrains.annotations.version>
-		<commons.logging.version>1.2</commons.logging.version>
-		<lombok.version>1.18.4</lombok.version>
-		<junit.version>4.12</junit.version>
 		<scala.binary.version>2.12</scala.binary.version>
 		<scala.version>2.12.7</scala.version>
 		<java.version>1.8</java.version>
-		<!-- hbase -->
-		<hbase.version>2.0.1</hbase.version>
-
-		<!-- hadoop -->
-		<hadoop.version>2.9.2</hadoop.version>
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
-
-			<dependency>
-				<groupId>com.asura</groupId>
-				<artifactId>asuraflink-common</artifactId>
-				<version>0.1</version>
-			</dependency>
-
-			<!-- Apache Flink dependencies -->
-			<!-- These dependencies are provided, because they should not be packaged into the JAR file. -->
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-scala_${scala.binary.version}</artifactId>
-				<version>${flink.version}</version>
-<!--				<scope>provided</scope>-->
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-metrics-core</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-runtime</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-annotations</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-core</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-table-planner_${scala.binary.version}</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-state-processor-api</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-rpc</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-connector-jdbc</artifactId>
-				<version>${flink.version}</version>
-				<scope>provided</scope>
-			</dependency>
-
-			<!-- Scala Library, provided by Flink as well. -->
-			<dependency>
-				<groupId>org.scala-lang</groupId>
-				<artifactId>scala-library</artifactId>
-				<version>${scala.version}</version>
-			</dependency>
-
-			<!-- Add connector dependencies here. They must be in the default scope (compile). -->
-
-			<!-- Example:
-
-            <dependency>
-                <groupId>org.apache.flink</groupId>
-                <artifactId>flink-connector-kafka-0.10_${scala.binary.version}</artifactId>
-                <version>${flink.version}</version>
-            </dependency>
-            -->
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-avro</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-json</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<!--flink statebackend-rocksdb-->
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-statebackend-rocksdb</artifactId>
-				<version>${flink.version}</version>
-				<!--<scope>test</scope>-->
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-table-common</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<!--flink connect-->
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-java</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-streaming-java</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
+			<!-- Flink core -->
 			<dependency>
 				<groupId>org.apache.flink</groupId>
 				<artifactId>flink-clients</artifactId>
 				<version>${flink.version}</version>
 			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-cep-scala_${scala.binary.version}</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-table-runtime</artifactId>
-				<version>${flink.version}</version>
-			</dependency>
+
+			<!-- Table ecosystem -->
 			<dependency>
 				<groupId>org.apache.flink</groupId>
 				<artifactId>flink-table-api-java-bridge</artifactId>
@@ -218,7 +71,50 @@ under the License.
 			</dependency>
 			<dependency>
 				<groupId>org.apache.flink</groupId>
-				<artifactId>flink-runtime-web</artifactId>
+				<artifactId>flink-table-api-scala-bridge_2.12</artifactId>
+				<version>1.16.0</version>
+			</dependency>
+			<!-- The following two dependencies are not required to define a SQL job pipeline,
+            but only to execute it.
+
+            In particular, here we're forced to use flink-table-planner_${scala.binary.version} instead of
+            flink-table-planner-loader, because otherwise we hit this bug https://youtrack.jetbrains.com/issue/IDEA-93855
+            when trying to run the examples from within IntelliJ IDEA. This is only relevant to this specific
+            examples project, as it's in the same build tree of flink-parent.
+
+            In a real environment, you need flink-table-runtime and flink-table-planner-loader either
+            at test scope, for executing tests, or at provided scope, to run the main directly.
+             -->
+			<dependency>
+				<groupId>org.apache.flink</groupId>
+				<artifactId>flink-table-runtime</artifactId>
+				<version>${flink.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.flink</groupId>
+				<artifactId>flink-table-planner_${scala.binary.version}</artifactId>
+				<version>${flink.version}</version>
+			</dependency>
+
+			<!-- Table connectors and formats -->
+			<dependency>
+				<groupId>org.apache.flink</groupId>
+				<artifactId>flink-connector-files</artifactId>
+				<version>${flink.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.flink</groupId>
+				<artifactId>flink-csv</artifactId>
+				<version>${flink.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.ververica</groupId>
+				<artifactId>flink-connector-mysql-cdc</artifactId>
+				<version>2.3.0</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.flink</groupId>
+				<artifactId>flink-connector-jdbc</artifactId>
 				<version>${flink.version}</version>
 			</dependency>
 			<dependency>
@@ -226,191 +122,25 @@ under the License.
 				<artifactId>flink-connector-kafka</artifactId>
 				<version>${flink.version}</version>
 			</dependency>
-			<!-- Add logging framework, to produce console output when running in the IDE. -->
-			<!-- These dependencies are excluded from the application JAR by default. -->
-			<dependency>
-				<groupId>org.slf4j</groupId>
-				<artifactId>slf4j-log4j12</artifactId>
-				<version>${sl4j.version}</version>
-				<scope>runtime</scope>
-			</dependency>
-			<dependency>
-				<groupId>log4j</groupId>
-				<artifactId>log4j</artifactId>
-				<version>1.2.17</version>
-				<scope>runtime</scope>
-			</dependency>
 
 
-			<dependency>
-				<groupId>com.alibaba</groupId>
-				<artifactId>fastjson</artifactId>
-				<version>${fastjson.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>org.projectlombok</groupId>
-				<artifactId>lombok</artifactId>
-				<version>${lombok.version}</version>
-				<scope>provided</scope>
-			</dependency>
-			<!--<dependency>-->
-				<!--<groupId>com.cloudwise.toushibao</groupId>-->
-				<!--<artifactId>simulatedata-generator</artifactId>-->
-				<!--<version>0.0.1</version>-->
-			<!--</dependency>-->
-			<dependency>
-				<groupId>org.elasticsearch</groupId>
-				<artifactId>elasticsearch-spark-20_2.11</artifactId>
-				<version>${es.spark.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>commons-logging</groupId>
-				<artifactId>commons-logging</artifactId>
-				<version>${commons.logging.version}</version>
-			</dependency>
-
-			<!-- hbase -->
-			<dependency>
-				<groupId>org.apache.hbase</groupId>
-				<artifactId>hbase-client</artifactId>
-				<version>${hbase.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.hbase</groupId>
-				<artifactId>hbase-server</artifactId>
-				<version>${hbase.version}</version>
-			</dependency>
-
-			<!-- hadoop -->
-			<dependency>
-				<groupId>org.apache.hadoop</groupId>
-				<artifactId>hadoop-client</artifactId>
-				<version>${hadoop.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.hadoop</groupId>
-				<artifactId>hadoop-common</artifactId>
-				<version>${hadoop.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.hadoop</groupId>
-				<artifactId>hadoop-hdfs</artifactId>
-				<version>${hadoop.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.hadoop</groupId>
-				<artifactId>hadoop-hdfs-client</artifactId>
-				<version>${hadoop.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>mysql</groupId>
-				<artifactId>mysql-connector-java</artifactId>
-				<version>${mysql.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>io.vertx</groupId>
-				<artifactId>vertx-jdbc-client</artifactId>
-				<version>${vertx.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.realityforge.org.jetbrains.annotations</groupId>
-				<artifactId>org.jetbrains.annotations</artifactId>
-				<version>${jetbrains.annotations.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>junit</groupId>
-				<artifactId>junit</artifactId>
-				<version>${junit.version}</version>
-			</dependency>
-
-			<!-- test utils dependency -->
+			<!-- Test dependencies -->
 			<dependency>
 				<groupId>org.apache.flink</groupId>
 				<artifactId>flink-test-utils</artifactId>
 				<version>${flink.version}</version>
 				<scope>test</scope>
 			</dependency>
-
-			<!-- JSON RowData schema test dependency -->
-			<dependency>
-				<groupId>org.scala-lang</groupId>
-				<artifactId>scala-compiler</artifactId>
-				<version>${scala.version}</version>
-				<scope>test</scope>
-			</dependency>
-
-			<!-- kafka -->
-			<dependency>
-				<groupId>org.apache.kafka</groupId>
-				<artifactId>kafka_2.12</artifactId>
-				<version>${kafka.version}</version>
-				<scope>provided</scope>
-			</dependency>
-
-			<dependency>
-				<groupId>org.apache.kafka</groupId>
-				<artifactId>kafka-clients</artifactId>
-				<version>${kafka.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>org.apache.kafka</groupId>
-				<artifactId>kafka-streams</artifactId>
-				<version>${kafka.version}</version>
-			</dependency>
-
 			<dependency>
 				<groupId>org.slf4j</groupId>
-				<artifactId>slf4j-simple</artifactId>
-				<version>1.6.6</version>
+				<artifactId>slf4j-log4j12</artifactId>
+				<version>1.7.32</version>
 			</dependency>
-
 			<dependency>
-				<groupId>redis.clients</groupId>
-				<artifactId>jedis</artifactId>
-				<version>3.3.0</version>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-core</artifactId>
+				<version>2.17.1</version>
 			</dependency>
-
-			<dependency>
-				<groupId>org.apache.bahir</groupId>
-				<artifactId>flink-connector-redis_2.11</artifactId>
-				<version>1.0</version>
-			</dependency>
-
-			<dependency>
-				<groupId>io.vertx</groupId>
-				<artifactId>vertx-redis-client</artifactId>
-				<version>4.0.2</version>
-			</dependency>
-
-<!--			<dependency>-->
-<!--				<groupId>com.github.rholder</groupId>-->
-<!--				<artifactId>guava-retrying</artifactId>-->
-<!--				<version>2.0.0</version>-->
-<!--			</dependency>-->
-
-			<dependency>
-				<groupId>com.google.guava</groupId>
-				<artifactId>guava</artifactId>
-				<version>29.0-jre</version>
-			</dependency>
-
-			<dependency>
-				<groupId>net.java.dev.javacc</groupId>
-				<artifactId>javacc</artifactId>
-				<version>7.0.9</version>
-			</dependency>
-
-			<dependency>
-				<groupId>org.apache.calcite</groupId>
-				<artifactId>calcite-core</artifactId>
-				<version>1.23.0</version>
-			</dependency>
-
-
 		</dependencies>
 	</dependencyManagement>
 
@@ -451,11 +181,11 @@ under the License.
 									</excludes>
 								</filter>
 							</filters>
-							<transformers>
-								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>com.asuraflink.StreamingJob</mainClass>
-								</transformer>
-							</transformers>
+<!--							<transformers>-->
+<!--								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">-->
+<!--									<mainClass>com.asuraflink.StreamingJob</mainClass>-->
+<!--								</transformer>-->
+<!--							</transformers>-->
 						</configuration>
 					</execution>
 				</executions>
