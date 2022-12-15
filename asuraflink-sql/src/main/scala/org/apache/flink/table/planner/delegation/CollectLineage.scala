@@ -42,6 +42,25 @@ object CollectLineage {
     }
   }
 
+  def parseLookupJoin(downTable: String,
+                      lookupJoin: StreamPhysicalLookupJoin,
+                      catalogManager: CatalogManager): Seq[Table] = {
+    // val joinType = lookupJoin.joinType
+    // val info = lookupJoin.joinInfo
+    // lookupJoin.allLookupKeys
+    val temporalTable = lookupJoin.temporalTable
+    val tableIdentifier: ObjectIdentifier = temporalTable match {
+      case t: TableSourceTable => t.contextResolvedTable.getIdentifier
+      case t: LegacyTableSourceTable[_] => t.tableIdentifier
+    }
+    val tableName = getTableName(tableIdentifier, catalogManager)
+    Seq(Table(tableName, temporalTable.getRowType, Seq.empty))
+    val input = lookupJoin.getInput
+    parseRelNode(downTable,
+      Collections.singletonList(input),
+      catalogManager) ++ Seq(Table(tableName, temporalTable.getRowType, Seq.empty))
+  }
+
   private def parseRelNode(downTable: String,
                            inputs: util.List[RelNode],
                            catalogManager: CatalogManager): Seq[Table] = {
@@ -79,7 +98,7 @@ object CollectLineage {
             Seq(Table(tableName, tb.getRowType, Seq.empty))
 
           case _@unknown =>
-            LOG.error(s"${unknown.getClass.getSimpleName} unsupport")
+            LOG.warn(s"${unknown.getClass.getSimpleName} unsupport")
             Seq.empty
         }
       case legacySink: LegacySink =>
@@ -87,20 +106,7 @@ object CollectLineage {
         Seq.empty
 
       case lookupJoin: StreamPhysicalLookupJoin =>
-        // val joinType = lookupJoin.joinType
-        // val info = lookupJoin.joinInfo
-        // lookupJoin.allLookupKeys
-        val temporalTable = lookupJoin.temporalTable
-        val tableIdentifier: ObjectIdentifier = temporalTable match {
-          case t: TableSourceTable => t.contextResolvedTable.getIdentifier
-          case t: LegacyTableSourceTable[_] => t.tableIdentifier
-        }
-        val tableName = getTableName(tableIdentifier, catalogManager)
-        Seq(Table(tableName, temporalTable.getRowType, Seq.empty))
-        val input = lookupJoin.getInput
-        parseRelNode(downTable,
-          Collections.singletonList(input),
-          catalogManager) ++ Seq(Table(tableName, temporalTable.getRowType, Seq.empty))
+        parseLookupJoin(downTable, lookupJoin, catalogManager)
 
       case sink: StreamPhysicalSink =>
         // TODO
@@ -128,28 +134,33 @@ object CollectLineage {
   def buildLineageResult(catalogManager: CatalogManager, optRelNode: RelNode): Unit = {
 
     if (optRelNode.isInstanceOf[StreamPhysicalRel]) {
-      optRelNode match {
+      val rootTable = optRelNode match {
         case sps: StreamPhysicalSink =>
           val identifier = sps.contextResolvedTable.getIdentifier
           val tableName = if (isAnonymous(identifier.asSummaryString())) {
             TableName(identifier.asSummaryString(), identifier.asSummaryString())
           } else getTableName(identifier, catalogManager)
 
-          val rootTable = Table(tableName, optRelNode.getRowType,
+          Table(tableName, optRelNode.getRowType,
             parseRelNode(identifier.asSummaryString(), optRelNode.getInputs, catalogManager))
 
-          println(rootTable.toString)
-        case spds: StreamPhysicalDataStreamScan =>
 
         case spls: StreamPhysicalLegacySink[_] =>
-
-        case spltss: StreamPhysicalLegacyTableSourceScan =>
-
-        case splj: StreamPhysicalLookupJoin =>
+          // TODO
+          Table(TableName.unknown(), optRelNode.getRowType, Seq())
+        // source 和 join relNode不应该出现在第一个位置
+//        case spds: StreamPhysicalDataStreamScan =>
+//
+//        case spltss: StreamPhysicalLegacyTableSourceScan =>
+//
+//        case lookupJoin: StreamPhysicalLookupJoin =>
+//          parseLookupJoin("", lookupJoin, catalogManager)
 
         case _@unknown =>
-          LOG.error(s"${unknown.getClass.getSimpleName} unsupport")
+          LOG.warn(s"${unknown.getClass.getSimpleName} unsupport")
+          Table(TableName.unknown(), optRelNode.getRowType, Seq())
       }
+      println(rootTable.toString)
 
 
     } else {
