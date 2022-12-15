@@ -3,10 +3,10 @@
 本项目主要用于个人学习, 扩展flink sql相关功能, 按**branch**划分flink版本以及功能点, 详情可见对应分支**readme**文件
 
 ### 分支功能介绍
-* feature-1.16
+* [feature-flink-sql-1.16](https://github.com/Asura7969/asuraflink/blob/feature-flink-sql-1.16/doc/detail.md)
   * flink sql血缘收集
 
-* feature-flink-sql-1.16
+* [feature-1.16](https://github.com/Asura7969/asuraflink/tree/feature-1.16)
   * Flink 自定义动态表(Redis)
   * Flink 维表延迟join
   * Flink 维表 key by join
