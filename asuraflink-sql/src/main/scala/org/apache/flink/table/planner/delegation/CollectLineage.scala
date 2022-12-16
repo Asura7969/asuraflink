@@ -1,6 +1,5 @@
 package org.apache.flink.table.planner.delegation
 
-import org.apache.calcite.plan.RelOptTable
 import org.slf4j.{Logger, LoggerFactory}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
@@ -8,7 +7,7 @@ import org.apache.calcite.rel.core.{Join, TableScan, Union}
 import org.apache.flink.table.catalog.{CatalogBaseTable, CatalogManager, ObjectIdentifier}
 import org.apache.flink.table.planner.plan.nodes.calcite.LegacySink
 import org.apache.flink.table.planner.plan.nodes.common.CommonPhysicalWindowTableFunction
-import org.apache.flink.table.planner.plan.nodes.physical.stream.{StreamPhysicalDataStreamScan, StreamPhysicalLegacySink, StreamPhysicalLegacyTableSourceScan, StreamPhysicalLookupJoin, StreamPhysicalRel, StreamPhysicalSink}
+import org.apache.flink.table.planner.plan.nodes.physical.stream.{StreamPhysicalDataStreamScan, StreamPhysicalLegacySink, StreamPhysicalLegacyTableSourceScan, StreamPhysicalLookupJoin, StreamPhysicalRel, StreamPhysicalSink, StreamPhysicalUnion}
 import org.apache.flink.table.planner.plan.schema.{DataStreamTable, FlinkPreparingTableBase, LegacyTableSourceTable, TableSourceTable}
 import org.apache.flink.table.planner.utils.JavaScalaConversionUtil.toScala
 
@@ -31,11 +30,14 @@ object CollectLineage {
 
   def getTableName(identifier: ObjectIdentifier,
                    catalogManager: CatalogManager): TableName = {
+    val name = identifier.asSummaryString()
+    if (isAnonymous(name)) return TableName(name, anonymous = true)
+
     val tableOption = catalogManager.getTable(identifier)
     toScala(tableOption) match {
       case Some(table) =>
         TableName(identifier.asSummaryString(),
-          anonymous = if (table.isAnonymous) table.toString else "",
+          anonymous = table.isAnonymous,
           isTemporal = table.isTemporary,
           options = table.getTable[CatalogBaseTable].getOptions)
       case _ => TableName.unknown()
@@ -84,51 +86,37 @@ object CollectLineage {
 
               case ltst: LegacyTableSourceTable[_] =>
                 val identifier = ltst.tableIdentifier
-                val schema = ltst.tableSource.getTableSchema
-                schema.getFieldDataTypes
-                TableName(identifier.asSummaryString(), "")
+                TableName(identifier.asSummaryString())
 
               case dsTable: DataStreamTable[_] =>
-                TableName(dsTable.getNames.mkString("."), "")
+                TableName(dsTable.getNames.mkString("."))
 
               case _@x =>
-                println(x)
-                TableName.unknown()
+                throw new RuntimeException(s"RelNode unsupported ${x.getClass.getSimpleName}")
             }
             Seq(Table(tableName, tb.getRowType, Seq.empty))
 
           case _@unknown =>
-            LOG.warn(s"${unknown.getClass.getSimpleName} unsupport")
-            Seq.empty
+            throw new RuntimeException(s"RelNode unsupported ${unknown.getClass.getSimpleName}")
         }
-      case legacySink: LegacySink =>
-        // TODO
-        Seq.empty
 
       case lookupJoin: StreamPhysicalLookupJoin =>
         parseLookupJoin(downTable, lookupJoin, catalogManager)
 
-      case sink: StreamPhysicalSink =>
-        // TODO
-        Seq.empty
+      case union: StreamPhysicalUnion =>
+        // TODO: 未测试
+        Seq(Table(
+          TableName("union", anonymous = true, isTemporal = true),
+          union.getRowType,
+          parseRelNode(downTable, union.getInputs, catalogManager)))
 
-      case union: Union =>
-        // TODO
-        Seq.empty
-
-      case commonPhysicalWindowTableFunction: CommonPhysicalWindowTableFunction =>
-        // TODO
-        Seq.empty
+//      case commonPhysicalWindowTableFunction: CommonPhysicalWindowTableFunction =>
+//      case legacySink: LegacySink =>
+//      case sink: StreamPhysicalSink =>
 
       case in =>
         parseRelNode(downTable, in.getInputs, catalogManager)
     }
-  }
-
-  def getCatalog[T](fieldName: String, catalogManager: CatalogManager):T = {
-    val field = classOf[CatalogManager].getDeclaredField(fieldName)
-    field.setAccessible(true)
-    field.get(catalogManager).asInstanceOf[T]
   }
 
   def buildLineageResult(catalogManager: CatalogManager, optRelNode: RelNode): Unit = {
@@ -137,44 +125,36 @@ object CollectLineage {
       val rootTable = optRelNode match {
         case sps: StreamPhysicalSink =>
           val identifier = sps.contextResolvedTable.getIdentifier
-          val tableName = if (isAnonymous(identifier.asSummaryString())) {
-            TableName(identifier.asSummaryString(), identifier.asSummaryString())
-          } else getTableName(identifier, catalogManager)
+          val name = identifier.asSummaryString()
+          val tableName = getTableName(identifier, catalogManager)
 
           Table(tableName, optRelNode.getRowType,
-            parseRelNode(identifier.asSummaryString(), optRelNode.getInputs, catalogManager))
-
+            parseRelNode(name, optRelNode.getInputs, catalogManager))
 
         case spls: StreamPhysicalLegacySink[_] =>
-          // TODO
-          Table(TableName.unknown(), optRelNode.getRowType, Seq())
+          // TODO: 未测试
+          Table(TableName(spls.sinkName), spls.deriveRowType,
+            parseRelNode(spls.sinkName, optRelNode.getInputs, catalogManager))
+
         // source 和 join relNode不应该出现在第一个位置
 //        case spds: StreamPhysicalDataStreamScan =>
-//
 //        case spltss: StreamPhysicalLegacyTableSourceScan =>
-//
 //        case lookupJoin: StreamPhysicalLookupJoin =>
 //          parseLookupJoin("", lookupJoin, catalogManager)
 
         case _@unknown =>
-          LOG.warn(s"${unknown.getClass.getSimpleName} unsupport")
-          Table(TableName.unknown(), optRelNode.getRowType, Seq())
+          throw new RuntimeException(s"Root RelNode unsupported ${unknown.getClass.getSimpleName}")
       }
       println(rootTable.toString)
 
-
-    } else {
-      LOG.warn(s"Only stream is supported.")
-    }
-
+    } else LOG.warn(s"Only stream is supported.")
   }
-
 }
 
 class CollectLineage
 
 case class TableName(identifierName: String,
-                     anonymous:String,
+                     anonymous:Boolean = false,
                      isTemporal:Boolean = false,
                      options: util.Map[String, String] = Collections.emptyMap()) {
 
@@ -194,7 +174,7 @@ case class TableName(identifierName: String,
 
 object TableName {
   def unknown(): TableName = {
-    TableName(CollectLineage.UNKNOWN, CollectLineage.UNKNOWN)
+    TableName(CollectLineage.UNKNOWN)
   }
 }
 
@@ -220,7 +200,6 @@ case class Table(name:TableName,
        |scheam: {
        |  $fields
        |}
-       |
        |$deadLine
        |""".stripMargin
   }

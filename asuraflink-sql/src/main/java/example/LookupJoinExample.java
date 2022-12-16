@@ -56,7 +56,6 @@ public class LookupJoinExample {
                 "  ON v.x=t.order_id"
         ).execute().print();
 
-        env.execute();
     }
 
     public static class MockSource implements SourceFunction<String> {
