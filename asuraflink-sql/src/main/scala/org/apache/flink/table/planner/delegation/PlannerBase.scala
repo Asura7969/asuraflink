@@ -192,7 +192,7 @@ abstract class PlannerBase(
 
     val relNodes = modifyOperations.map(translateToRel)
     val optimizedRelNodes = optimize(relNodes)
-    optimizedRelNodes.foreach(buildLineageResult(catalogManager, _))
+    optimizedRelNodes.foreach(buildLineageResult(getTableConfig, catalogManager, _))
     val execGraph = translateToExecNodeGraph(optimizedRelNodes, isCompiled = false)
     val transformations = translateToPlan(execGraph)
     afterTranslation()

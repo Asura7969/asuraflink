@@ -4,6 +4,9 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
 import org.apache.calcite.rel.core.{Join, TableScan, Union}
+import org.apache.flink.configuration.ConfigOptions.key
+import org.apache.flink.configuration.{ConfigOption, Configuration}
+import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.catalog.{CatalogBaseTable, CatalogManager, ObjectIdentifier}
 import org.apache.flink.table.planner.plan.nodes.calcite.LegacySink
 import org.apache.flink.table.planner.plan.nodes.common.CommonPhysicalWindowTableFunction
@@ -21,6 +24,9 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapCon
  * @create 2022-12-12-20:15
  */
 object CollectLineage {
+
+  val COLLECT_IMPL_KEY: String = "collect-lineage-impl"
+  val COLLECT_IMPL: ConfigOption[String] = key(COLLECT_IMPL_KEY).stringType().defaultValue("log")
 
   val LOG: Logger = LoggerFactory.getLogger(classOf[CollectLineage])
   val UNKNOWN:String = "UNKNOWN"
@@ -103,13 +109,7 @@ object CollectLineage {
       case lookupJoin: StreamPhysicalLookupJoin =>
         parseLookupJoin(downTable, lookupJoin, catalogManager)
 
-      case union: StreamPhysicalUnion =>
-        // TODO: 未测试
-        Seq(Table(
-          TableName("union", anonymous = true, isTemporal = true),
-          union.getRowType,
-          parseRelNode(downTable, union.getInputs, catalogManager)))
-
+//      case union: StreamPhysicalUnion =>
 //      case commonPhysicalWindowTableFunction: CommonPhysicalWindowTableFunction =>
 //      case legacySink: LegacySink =>
 //      case sink: StreamPhysicalSink =>
@@ -119,7 +119,9 @@ object CollectLineage {
     }
   }
 
-  def buildLineageResult(catalogManager: CatalogManager, optRelNode: RelNode): Unit = {
+  def buildLineageResult(tableConfig: TableConfig,
+                         catalogManager: CatalogManager,
+                         optRelNode: RelNode): Unit = {
 
     if (optRelNode.isInstanceOf[StreamPhysicalRel]) {
       val rootTable = optRelNode match {
@@ -145,7 +147,10 @@ object CollectLineage {
         case _@unknown =>
           throw new RuntimeException(s"Root RelNode unsupported ${unknown.getClass.getSimpleName}")
       }
-      println(rootTable.toString)
+      tableConfig.getConfiguration.get[String](COLLECT_IMPL) match {
+        case "log" => LOG.info(rootTable.toString)
+        case _@impl => LOG.warn(s"Unsupport collect impl: $impl")
+      }
 
     } else LOG.warn(s"Only stream is supported.")
   }

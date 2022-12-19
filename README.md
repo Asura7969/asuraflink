@@ -17,7 +17,7 @@
 
 ### 分支功能介绍
 * [feature-flink-sql-1.16](https://github.com/Asura7969/asuraflink/blob/feature-flink-sql-1.16/doc/detail.md)
-  * flink sql血缘收集
+  * flink sql血缘收集(未完)
 
 * [feature-1.16](https://github.com/Asura7969/asuraflink/tree/feature-1.16)
   * Flink 自定义动态表(Redis)
@@ -27,4 +27,4 @@
   * Flink Sql 侧流输出（一）
   * Flink Sql 侧流输出（二）
   * Flink Sql Increment Window
-> feature-flink-sql-1.16 分支扩展功能均在 flink 1.12版本上开发
+> **feature-1.16** 分支扩展功能均在 flink 1.12版本上开发
