@@ -10,7 +10,7 @@ import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.catalog.{CatalogBaseTable, CatalogManager, ObjectIdentifier}
 import org.apache.flink.table.planner.plan.nodes.calcite.LegacySink
 import org.apache.flink.table.planner.plan.nodes.common.CommonPhysicalWindowTableFunction
-import org.apache.flink.table.planner.plan.nodes.physical.stream.{StreamPhysicalDataStreamScan, StreamPhysicalLegacySink, StreamPhysicalLegacyTableSourceScan, StreamPhysicalLookupJoin, StreamPhysicalRel, StreamPhysicalSink, StreamPhysicalUnion}
+import org.apache.flink.table.planner.plan.nodes.physical.stream.{StreamPhysicalCalc, StreamPhysicalDataStreamScan, StreamPhysicalLegacySink, StreamPhysicalLegacyTableSourceScan, StreamPhysicalLookupJoin, StreamPhysicalRel, StreamPhysicalSink, StreamPhysicalUnion}
 import org.apache.flink.table.planner.plan.schema.{DataStreamTable, FlinkPreparingTableBase, LegacyTableSourceTable, TableSourceTable}
 import org.apache.flink.table.planner.utils.JavaScalaConversionUtil.toScala
 
@@ -73,6 +73,19 @@ object CollectLineage {
                            inputs: util.List[RelNode],
                            catalogManager: CatalogManager): Seq[Table] = {
     inputs.flatMap {
+      case calc: StreamPhysicalCalc =>
+
+        /**
+         * TODO: 参考 {@link CommonCalc#projectionToString}
+         */
+        val calcProgram = calc.getProgram
+        val projectList = calcProgram.getProjectList
+        val inputFieldNames = calcProgram.getInputRowType.getFieldNames.toList
+        val localExprs = calcProgram.getExprList.toList
+        val outputFieldNames = calcProgram.getOutputRowType.getFieldNames.toList
+
+        parseRelNode(downTable, calc.getInputs, catalogManager)
+
       case join: Join =>
         // val joinType = join.getJoinType
         // val condition = join.getCondition
