@@ -7,10 +7,10 @@ import org.apache.calcite.rel.core.{Join, TableScan, Union}
 import org.apache.flink.configuration.ConfigOptions.key
 import org.apache.flink.configuration.{ConfigOption, Configuration}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.catalog.{CatalogBaseTable, CatalogManager, ObjectIdentifier}
+import org.apache.flink.table.catalog.{CatalogBaseTable, CatalogManager, ObjectIdentifier, ResolvedSchema}
 import org.apache.flink.table.planner.plan.nodes.calcite.LegacySink
 import org.apache.flink.table.planner.plan.nodes.common.CommonPhysicalWindowTableFunction
-import org.apache.flink.table.planner.plan.nodes.physical.stream.{StreamPhysicalCalc, StreamPhysicalDataStreamScan, StreamPhysicalLegacySink, StreamPhysicalLegacyTableSourceScan, StreamPhysicalLookupJoin, StreamPhysicalRel, StreamPhysicalSink, StreamPhysicalUnion}
+import org.apache.flink.table.planner.plan.nodes.physical.stream.{StreamPhysicalCalc, StreamPhysicalDataStreamScan, StreamPhysicalJoin, StreamPhysicalLegacySink, StreamPhysicalLegacyTableSourceScan, StreamPhysicalLookupJoin, StreamPhysicalRel, StreamPhysicalSink, StreamPhysicalUnion}
 import org.apache.flink.table.planner.plan.schema.{DataStreamTable, FlinkPreparingTableBase, LegacyTableSourceTable, TableSourceTable}
 import org.apache.flink.table.planner.utils.JavaScalaConversionUtil.toScala
 
@@ -45,6 +45,7 @@ object CollectLineage {
         TableName(identifier.asSummaryString(),
           anonymous = table.isAnonymous,
           isTemporal = table.isTemporary,
+          schema = Some(table.getResolvedSchema),
           options = table.getTable[CatalogBaseTable].getOptions)
       case _ => TableName.unknown()
     }
@@ -89,6 +90,7 @@ object CollectLineage {
       case join: Join =>
         // val joinType = join.getJoinType
         // val condition = join.getCondition
+
         val left = join.getLeft
         val right = join.getRight
 
@@ -143,13 +145,13 @@ object CollectLineage {
           val name = identifier.asSummaryString()
           val tableName = getTableName(identifier, catalogManager)
 
-          Table(tableName, optRelNode.getRowType,
-            parseRelNode(name, optRelNode.getInputs, catalogManager))
+          Table(tableName, sps.getRowType,
+            parseRelNode(name, sps.getInputs, catalogManager))
 
         case spls: StreamPhysicalLegacySink[_] =>
           // TODO: 未测试
           Table(TableName(spls.sinkName), spls.deriveRowType,
-            parseRelNode(spls.sinkName, optRelNode.getInputs, catalogManager))
+            parseRelNode(spls.sinkName, spls.getInputs, catalogManager))
 
         // source 和 join relNode不应该出现在第一个位置
 //        case spds: StreamPhysicalDataStreamScan =>
@@ -162,7 +164,7 @@ object CollectLineage {
       }
       tableConfig.getConfiguration.get[String](COLLECT_IMPL) match {
         case "log" => LOG.info(rootTable.toString)
-        case _@impl => LOG.warn(s"Unsupport collect impl: $impl")
+        case _@impl => LOG.warn(s"Unsupported collect impl: $impl")
       }
 
     } else LOG.warn(s"Only stream is supported.")
@@ -174,6 +176,7 @@ class CollectLineage
 case class TableName(identifierName: String,
                      anonymous:Boolean = false,
                      isTemporal:Boolean = false,
+                     schema: Option[ResolvedSchema] = None,
                      options: util.Map[String, String] = Collections.emptyMap()) {
 
   def isUnknown = identifierName.equals(CollectLineage.UNKNOWN)
@@ -207,15 +210,23 @@ case class Table(name:TableName,
                  upNodes: Seq[Table]) {
   override def toString: String = {
 
-    val fieldList: util.List[RelDataTypeField] = rowType.getFieldList
-    val fields = fieldList.asScala
-      .map(field => s"filed name: ${field.getName}, type:${field.getType}")
-      .mkString("\n  ")
+    val fields = name.schema match {
+      case Some(s) =>
+        s.getColumns.asScala
+          .map(c => s"filed name: ${c.getName}, type:${c.getDataType.toString}")
+          .mkString("\n  ")
+      case _ =>
+        val fieldList = rowType.getFieldList
+        fieldList.asScala
+          .map(field => s"filed name: ${field.getName}, type:${field.getType}")
+          .mkString("\n  ")
+    }
+
     val deadLine = if (upNodes.nonEmpty) s"\n    ${upNodes.mkString("\n    ")}" else ""
 
     s"""
        |$name
-       |scheam: {
+       |schema: {
        |  $fields
        |}
        |$deadLine
