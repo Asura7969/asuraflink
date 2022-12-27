@@ -34,26 +34,26 @@ object CollectLineage {
 
   def isAnonymous(v: String): Boolean = v.startsWith("*anonymous")
 
-  def getTableName(identifier: ObjectIdentifier,
-                   catalogManager: CatalogManager): TableName = {
+  def getTableMeta(identifier: ObjectIdentifier,
+                   catalogManager: CatalogManager): TableMeta = {
     val name = identifier.asSummaryString()
-    if (isAnonymous(name)) return TableName(name, anonymous = true)
+    if (isAnonymous(name)) return TableMeta(name, anonymous = true)
 
     val tableOption = catalogManager.getTable(identifier)
     toScala(tableOption) match {
       case Some(table) =>
-        TableName(identifier.asSummaryString(),
+        TableMeta(identifier.asSummaryString(),
           anonymous = table.isAnonymous,
           isTemporal = table.isTemporary,
           schema = Some(table.getResolvedSchema),
           options = table.getTable[CatalogBaseTable].getOptions)
-      case _ => TableName.unknown()
+      case _ => TableMeta.unknown()
     }
   }
 
-  def parseLookupJoin(downTable: String,
-                      lookupJoin: StreamPhysicalLookupJoin,
-                      catalogManager: CatalogManager): Seq[Table] = {
+  private def parseLookupJoin(downTable: String,
+                              lookupJoin: StreamPhysicalLookupJoin,
+                              catalogManager: CatalogManager): Seq[Table] = {
     // val joinType = lookupJoin.joinType
     // val info = lookupJoin.joinInfo
     // lookupJoin.allLookupKeys
@@ -62,12 +62,12 @@ object CollectLineage {
       case t: TableSourceTable => t.contextResolvedTable.getIdentifier
       case t: LegacyTableSourceTable[_] => t.tableIdentifier
     }
-    val tableName = getTableName(tableIdentifier, catalogManager)
-    Seq(Table(tableName, temporalTable.getRowType, Seq.empty))
+    val meta = getTableMeta(tableIdentifier, catalogManager)
+    Seq(Table(meta, temporalTable.getRowType, Seq.empty))
     val input = lookupJoin.getInput
     parseRelNode(downTable,
       Collections.singletonList(input),
-      catalogManager) ++ Seq(Table(tableName, temporalTable.getRowType, Seq.empty))
+      catalogManager) ++ Seq(Table(meta, temporalTable.getRowType, Seq.empty))
   }
 
   private def parseRelNode(downTable: String,
@@ -84,7 +84,7 @@ object CollectLineage {
         val inputFieldNames = calcProgram.getInputRowType.getFieldNames.toList
         val localExprs = calcProgram.getExprList.toList
         val outputFieldNames = calcProgram.getOutputRowType.getFieldNames.toList
-
+        // calcProgram.getNamedProjects
         parseRelNode(downTable, calc.getInputs, catalogManager)
 
       case join: Join =>
@@ -93,7 +93,7 @@ object CollectLineage {
 
         val left = join.getLeft
         val right = join.getRight
-
+        val cluster = join.getCluster
         val leftTable = parseRelNode(downTable, left.getInputs, catalogManager)
         val rightTable = parseRelNode(downTable, right.getInputs, catalogManager)
         leftTable.++(rightTable)
@@ -101,16 +101,16 @@ object CollectLineage {
       case tableScan: TableScan =>
         tableScan.getTable match {
           case tb: FlinkPreparingTableBase =>
-            val tableName: TableName = tb match {
+            val tableName: TableMeta = tb match {
               case tst: TableSourceTable =>
-                getTableName(tst.contextResolvedTable.getIdentifier, catalogManager)
+                getTableMeta(tst.contextResolvedTable.getIdentifier, catalogManager)
 
               case ltst: LegacyTableSourceTable[_] =>
                 val identifier = ltst.tableIdentifier
-                TableName(identifier.asSummaryString())
+                TableMeta(identifier.asSummaryString())
 
               case dsTable: DataStreamTable[_] =>
-                TableName(dsTable.getNames.mkString("."))
+                TableMeta(dsTable.getNames.mkString("."))
 
               case _@x =>
                 throw new RuntimeException(s"RelNode unsupported ${x.getClass.getSimpleName}")
@@ -143,14 +143,14 @@ object CollectLineage {
         case sps: StreamPhysicalSink =>
           val identifier = sps.contextResolvedTable.getIdentifier
           val name = identifier.asSummaryString()
-          val tableName = getTableName(identifier, catalogManager)
+          val tableName = getTableMeta(identifier, catalogManager)
 
           Table(tableName, sps.getRowType,
             parseRelNode(name, sps.getInputs, catalogManager))
 
         case spls: StreamPhysicalLegacySink[_] =>
           // TODO: 未测试
-          Table(TableName(spls.sinkName), spls.deriveRowType,
+          Table(TableMeta(spls.sinkName), spls.deriveRowType,
             parseRelNode(spls.sinkName, spls.getInputs, catalogManager))
 
         // source 和 join relNode不应该出现在第一个位置
@@ -173,7 +173,7 @@ object CollectLineage {
 
 class CollectLineage
 
-case class TableName(identifierName: String,
+case class TableMeta(identifierName: String,
                      anonymous:Boolean = false,
                      isTemporal:Boolean = false,
                      schema: Option[ResolvedSchema] = None,
@@ -193,9 +193,9 @@ case class TableName(identifierName: String,
   }
 }
 
-object TableName {
-  def unknown(): TableName = {
-    TableName(CollectLineage.UNKNOWN)
+object TableMeta {
+  def unknown(): TableMeta = {
+    TableMeta(CollectLineage.UNKNOWN)
   }
 }
 
@@ -205,7 +205,7 @@ object TableName {
  * @param rowType 列数据
  * @param upNodes 上游表信息
  */
-case class Table(name:TableName,
+case class Table(name:TableMeta,
                  rowType: RelDataType,
                  upNodes: Seq[Table]) {
   override def toString: String = {
