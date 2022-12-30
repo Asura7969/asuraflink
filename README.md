@@ -17,7 +17,7 @@
 
 ### 分支功能介绍
 * [feature-flink-sql-1.16](https://github.com/Asura7969/asuraflink/blob/feature-flink-sql-1.16/doc/detail.md)
-  * flink sql血缘收集(表级别, 列血缘未支持)
+  * flink sql血缘收集(表级别已完成, 列级别未完成)
 
 * [feature-1.16](https://github.com/Asura7969/asuraflink/tree/feature-1.16)
   * Flink 自定义动态表(Redis)
