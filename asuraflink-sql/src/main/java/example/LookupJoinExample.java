@@ -49,12 +49,14 @@ public class LookupJoinExample {
                 "  'table-name' = 't_order'                         " +
                 ")");
 
-        tbEnv.sqlQuery(
+        String sql =
                 "SELECT * FROM v                                    " +
-                "JOIN t                                             " +
-                "  FOR SYSTEM_TIME AS OF v.y                        " +
-                "  ON v.x=t.order_id"
-        ).execute().print();
+                        "JOIN t                                     " +
+                        "  FOR SYSTEM_TIME AS OF v.y                " +
+                        "  ON v.x=t.order_id";
+
+        System.out.println(tbEnv.explainSql(sql));
+        tbEnv.sqlQuery(sql).execute().print();
 
     }
 

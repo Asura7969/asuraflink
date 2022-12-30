@@ -66,7 +66,7 @@ public class ColumnLineageExample {
                         ")");
 
         String sql = "INSERT INTO mysql_sink " +
-                "SELECT  s2.a, s1.a as aa, s2.b, s2.c FROM source1 as s1 INNER JOIN source2 as s2 on s2.a = s1.a";
+                "SELECT CONCAT(s2.a, s1.a) as concat_a, s1.a as aa, s2.b, s2.c FROM source1 as s1 INNER JOIN source2 as s2 on s2.a = s1.a";
 
         System.out.println(tbEnv.explainSql(sql));
         TableResult tableResult = tbEnv.executeSql(sql);

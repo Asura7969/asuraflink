@@ -43,6 +43,7 @@ import org.apache.flink.table.planner.connectors.DynamicSinkUtils
 import org.apache.flink.table.planner.connectors.DynamicSinkUtils.validateSchemaAndApplyImplicitCast
 import org.apache.flink.table.planner.delegation.CollectLineage.buildLineageResult
 import org.apache.flink.table.planner.delegation.DialectFactory.DefaultParserContext
+import org.apache.flink.table.planner.delegation.LogicalNodeCollector.collectField
 import org.apache.flink.table.planner.expressions.PlannerTypeInferenceUtilImpl
 import org.apache.flink.table.planner.hint.FlinkHints
 import org.apache.flink.table.planner.operations.PlannerQueryOperation
@@ -191,6 +192,7 @@ abstract class PlannerBase(
     }
 
     val relNodes = modifyOperations.map(translateToRel)
+    relNodes.foreach(collectField(getTableConfig, catalogManager, _))
     val optimizedRelNodes = optimize(relNodes)
     optimizedRelNodes.foreach(buildLineageResult(getTableConfig, catalogManager, _))
     val execGraph = translateToExecNodeGraph(optimizedRelNodes, isCompiled = false)
