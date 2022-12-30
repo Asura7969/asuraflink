@@ -47,8 +47,8 @@ public class UnionExample {
                         "  'password' = '123456',                                    " +
                         "  'table-name' = 'test_source_union2'                       " +
                         ")");
-        tbEnv.sqlQuery(
-                "SELECT * FROM source1 UNION ALL SELECT * FROM source2"
-        ).execute().print();
+        String sql = "SELECT * FROM source1 UNION ALL SELECT * FROM source2";
+        System.out.println(tbEnv.explainSql(sql));
+        tbEnv.sqlQuery(sql).execute().print();
     }
 }

@@ -77,7 +77,7 @@ public class StreamWindowSQLExample {
                         + "  COUNT(DISTINCT product) unique_products\n"
                         + "FROM orders\n"
                         + "GROUP BY TUMBLE(ts, INTERVAL '5' SECOND)";
-
+        System.out.println(tEnv.explainSql(query));
         tEnv.executeSql(query).print();
         // should output:
         // +----+--------------------------------+--------------+--------------+-----------------+

@@ -2,7 +2,7 @@ package org.apache.flink.table.planner.delegation
 
 import org.apache.calcite.rel.{BiRel, RelNode}
 import org.apache.calcite.rel.`type`.RelDataTypeField
-import org.apache.calcite.rel.logical.{LogicalCorrelate, LogicalJoin, LogicalProject, LogicalTableScan}
+import org.apache.calcite.rel.logical.{LogicalAggregate, LogicalCorrelate, LogicalJoin, LogicalProject, LogicalTableScan, LogicalUnion}
 import org.apache.calcite.rex.{RexCall, RexCorrelVariable, RexDynamicParam, RexFieldAccess, RexInputRef, RexLiteral, RexLocalRef, RexOver, RexPatternFieldRef, RexRangeRef, RexSubQuery, RexTableInputRef, RexVisitor}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.catalog.{CatalogManager, ObjectIdentifier}
@@ -54,6 +54,18 @@ object LogicalNodeCollector {
 
         printColumns(outFields)
 
+      case union: LogicalUnion =>
+        val inputs = union.getInputs.asScala
+        // TODO: 重复输出血缘信息
+        inputs.foreach(input => collectField(tableConfig, catalogManager, input, outFields))
+
+      case logicalAggregate: LogicalAggregate =>
+        collectField(tableConfig, catalogManager, logicalAggregate.getInput, outFields)
+
+      case logicalTableScan: LogicalTableScan =>
+        parseSource(tableConfig, catalogManager, logicalTableScan, outFields, 0 until logicalTableScan.getRowType.getFieldCount)
+        printColumns(outFields)
+
       case _@unknown =>
         collectField(tableConfig, catalogManager, unknown.getInput(0), outFields)
 
@@ -74,12 +86,14 @@ object LogicalNodeCollector {
                         fields: Seq[RelDataTypeField],
                         outFields: Option[Seq[Column]]): Unit = {
       outFields.get.foreach { c =>
-        val columns = c.getIndexes.filter(startIndex.contains(_))
-          .map(i => Column.from(table, fields(i - startIndex.head)))
-        if (columns.nonEmpty) {
-          c.up match {
-            case Some(cols) => c.up = Some(cols.++(columns))
-            case _ => c.up = Some(columns)
+        if (null != c.getIndexes && c.getIndexes.nonEmpty) {
+          val columns = c.getIndexes.filter(startIndex.contains(_))
+            .map(i => Column.from(table, fields(i - startIndex.head)))
+          if (columns.nonEmpty) {
+            c.up match {
+              case Some(cols) => c.up = Some(cols.++(columns))
+              case _ => c.up = Some(columns)
+            }
           }
         }
       }
@@ -118,9 +132,7 @@ class VisitorRexNode extends RexVisitor[Option[Seq[Int]]] {
     Some(rexLocalRef.getIndex :: Nil)
   }
 
-  override def visitLiteral(rexLiteral: RexLiteral): Option[Seq[Int]] = {
-    throw new RuntimeException("Unsupported rexLiteral")
-  }
+  override def visitLiteral(rexLiteral: RexLiteral): Option[Seq[Int]] = None
 
   override def visitCall(rexCall: RexCall): Option[Seq[Int]] = {
     Some(rexCall.operands.asScala.flatten(_.accept(this)).flatten)

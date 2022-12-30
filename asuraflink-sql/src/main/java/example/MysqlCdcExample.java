@@ -57,6 +57,7 @@ public class MysqlCdcExample {
 
         tableEnv.executeSql(sourceTable);
         tableEnv.executeSql(sinkTable);
+        System.out.println(tableEnv.explainSql(transformSQL));
         TableResult result = tableEnv.executeSql(transformSQL);
         result.await();
     }
