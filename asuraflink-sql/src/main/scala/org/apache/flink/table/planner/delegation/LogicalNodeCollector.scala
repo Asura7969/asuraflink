@@ -2,8 +2,10 @@ package org.apache.flink.table.planner.delegation
 
 import org.apache.calcite.rel.{BiRel, RelNode}
 import org.apache.calcite.rel.`type`.RelDataTypeField
-import org.apache.calcite.rel.logical.{LogicalAggregate, LogicalCorrelate, LogicalJoin, LogicalProject, LogicalTableScan, LogicalUnion}
+import org.apache.calcite.rel.logical.{LogicalAggregate, LogicalCorrelate, LogicalJoin, LogicalProject, LogicalTableScan, LogicalUnion, LogicalValues}
 import org.apache.calcite.rex.{RexCall, RexCorrelVariable, RexDynamicParam, RexFieldAccess, RexInputRef, RexLiteral, RexLocalRef, RexOver, RexPatternFieldRef, RexRangeRef, RexSubQuery, RexTableInputRef, RexVisitor}
+import org.apache.flink.configuration.ConfigOption
+import org.apache.flink.configuration.ConfigOptions.key
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.catalog.{CatalogManager, ObjectIdentifier}
 import org.apache.flink.table.planner.plan.nodes.calcite.LogicalSink
@@ -11,22 +13,32 @@ import org.apache.flink.table.planner.plan.schema.{FlinkPreparingTableBase, Tabl
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
-import java.util
-import java.util.Collections
 import scala.annotation.tailrec
-import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter}
-import scala.collection.{immutable, mutable}
+import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.mutable
 
 class LogicalNodeCollector
 
 object LogicalNodeCollector {
 
   val LOG: Logger = LoggerFactory.getLogger(classOf[LogicalNodeCollector])
+  val COLLECT_IMPL_KEY: String = "collect-lineage-impl"
+  val COLLECT_IMPL: ConfigOption[String] = key(COLLECT_IMPL_KEY).stringType().defaultValue("log")
+  def collectSqlFieldsLinage(tableConfig: TableConfig,
+                             catalogManager: CatalogManager,
+                             optRelNode: RelNode): Unit = {
+    try {
+      val fieldsLinage = collectField(tableConfig, catalogManager, optRelNode)
+      printColumns(fieldsLinage, tableConfig)
+    } catch {
+      case e: Exception => LOG.error("", e)
+    }
+  }
 
-  def collectField(tableConfig: TableConfig,
-                   catalogManager: CatalogManager,
-                   optRelNode: RelNode,
-                   outFields: Option[Seq[Column]] = None): Unit = {
+  private def collectField(tableConfig: TableConfig,
+                           catalogManager: CatalogManager,
+                           optRelNode: RelNode,
+                           outFields: Option[Seq[Column]] = None): Option[Seq[Column]] = {
 
     optRelNode match {
       case logicalSink: LogicalSink =>
@@ -52,19 +64,18 @@ object LogicalNodeCollector {
         val right = biRel.getRight
         parseSource(tableConfig, catalogManager, right, outFields, splitIndex until splitIndex + right.getRowType.getFieldCount)
 
-        printColumns(outFields)
-
       case union: LogicalUnion =>
         val inputs = union.getInputs.asScala
-        // TODO: 重复输出血缘信息
         inputs.foreach(input => collectField(tableConfig, catalogManager, input, outFields))
+        outFields
 
       case logicalAggregate: LogicalAggregate =>
         collectField(tableConfig, catalogManager, logicalAggregate.getInput, outFields)
 
       case logicalTableScan: LogicalTableScan =>
         parseSource(tableConfig, catalogManager, logicalTableScan, outFields, 0 until logicalTableScan.getRowType.getFieldCount)
-        printColumns(outFields)
+
+      case _: LogicalValues => None
 
       case _@unknown =>
         collectField(tableConfig, catalogManager, unknown.getInput(0), outFields)
@@ -72,19 +83,27 @@ object LogicalNodeCollector {
     }
   }
 
-  def printColumns(outFields: Option[Seq[Column]]): Unit = {
-    println(outFields.get.map(_.toString).mkString("\n"))
+  def printColumns(outFields: Option[Seq[Column]], tableConfig: TableConfig): Unit = {
+    outFields match {
+      case Some(value) =>
+        tableConfig.getConfiguration.get[String](COLLECT_IMPL) match {
+          case "log" => LOG.info(s"${value.map(_.toString).mkString("\n")}")
+          case _@impl => LOG.warn(s"Unsupported collect impl: $impl")
+        }
+      case _ =>
+    }
   }
 
+  @tailrec
   def parseSource(tableConfig: TableConfig,
                   catalogManager: CatalogManager,
                   relNode: RelNode,
                   outFields: Option[Seq[Column]] = None,
-                  startIndex: Seq[Int]): Unit = {
+                  startIndex: Seq[Int]): Option[Seq[Column]] = {
 
     def completeColumns(table: ObjectIdentifier,
                         fields: Seq[RelDataTypeField],
-                        outFields: Option[Seq[Column]]): Unit = {
+                        outFields: Option[Seq[Column]]): Option[Seq[Column]] = {
       outFields.get.foreach { c =>
         if (null != c.getIndexes && c.getIndexes.nonEmpty) {
           val columns = c.getIndexes.filter(startIndex.contains(_))
@@ -97,6 +116,7 @@ object LogicalNodeCollector {
           }
         }
       }
+      outFields
     }
 
     relNode match {
@@ -104,7 +124,7 @@ object LogicalNodeCollector {
         logicalTableScan.getTable match {
           case tableSourceTable: TableSourceTable =>
             val table = tableSourceTable.contextResolvedTable.getIdentifier
-            val fields: mutable.Seq[RelDataTypeField] = tableSourceTable.getRowType.getFieldList.asScala
+            val fields = tableSourceTable.getRowType.getFieldList.asScala
             completeColumns(table, fields, outFields)
 
           case flinkPreparingTableBase: FlinkPreparingTableBase =>
@@ -119,7 +139,6 @@ object LogicalNodeCollector {
       case _@node =>
         parseSource(tableConfig, catalogManager, node.getInput(0), outFields, startIndex)
     }
-
   }
 }
 

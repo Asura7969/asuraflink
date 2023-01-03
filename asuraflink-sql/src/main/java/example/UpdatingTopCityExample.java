@@ -140,6 +140,17 @@ public final class UpdatingTopCityExample {
                                 + "    LIMIT 2"
                                 + "  )");
 
+        System.out.println(env.explainSql("SELECT state, city, latest_year, population "
+                + "FROM "
+                + "  (SELECT DISTINCT state FROM CurrentPopulation) States,"
+                + "  LATERAL ("
+                + "    SELECT city, latest_year, population"
+                + "    FROM CurrentPopulation"
+                + "    WHERE state = States.state"
+                + "    ORDER BY population DESC, latest_year DESC"
+                + "    LIMIT 2"
+                + "  )"));
+
         // uncomment the following line to get insights into the continuously evaluated query,
         // execute this pipeline by using the local client as an implicit sink
         // topCitiesPerState.execute().print();
